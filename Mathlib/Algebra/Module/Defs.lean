@@ -3,11 +3,11 @@ Copyright (c) 2015 Nathaniel Thomas. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Nathaniel Thomas, Jeremy Avigad, Johannes Hölzl, Mario Carneiro
 -/
-import Mathlib.Algebra.Group.Action.End
-import Mathlib.Algebra.Group.Equiv.Basic
-import Mathlib.Algebra.GroupWithZero.Action.Defs
-import Mathlib.Algebra.Ring.Defs
-import Mathlib.Algebra.SMulWithZero
+import Mathlib.Algebra.Group.Hom.End
+import Mathlib.Algebra.GroupWithZero.Action.Units
+import Mathlib.Algebra.Ring.Invertible
+import Mathlib.Algebra.Ring.Opposite
+import Mathlib.Data.Int.Cast.Lemmas
 
 /-!
 # Modules over a ring

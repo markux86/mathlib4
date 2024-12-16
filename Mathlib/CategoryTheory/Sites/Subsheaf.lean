@@ -119,7 +119,7 @@ theorem Subpresheaf.eq_top_iff_isIso : G = ⊤ ↔ IsIso G.ι := by
   · intro H
     ext U x
     apply (iff_of_eq (iff_true _)).mpr
-    rw [← IsIso.inv_hom_id_apply (G.ι.app U) x]
+    rw [← IsIso.inv_hom_id_apply_type (G.ι.app U) x]
     exact ((inv (G.ι.app U)) x).2
 
 /-- If the image of a morphism falls in a subpresheaf, then the morphism factors through it. -/

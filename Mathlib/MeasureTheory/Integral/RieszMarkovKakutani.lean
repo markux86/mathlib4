@@ -15,12 +15,13 @@ import Mathlib.MeasureTheory.Function.LocallyIntegrable
 /-!
 #  Riesz–Markov–Kakutani representation theorem
 
-This file will prove different versions of the Riesz-Markov-Kakutani representation theorem.
-The theorem is first proven for compact spaces, from which the statements about linear functionals
-on bounded continuous functions or compactly supported functions on locally compact spaces follow.
+This file will prove the Riesz-Markov-Kakutani representation theorem on a locally compact
+T2 space `X`. As a special case, the statements about linear functionals on bounded continuous
+functions follows.
 
 To make use of the existing API, the measure is constructed from a content `λ` on the
-compact subsets of the space X, rather than the usual construction of open sets in the literature.
+compact subsets of a locally compact space X, rather than the usual construction of open sets in the
+literature.
 
 ## References
 
@@ -31,19 +32,14 @@ compact subsets of the space X, rather than the usual construction of open sets 
 
 noncomputable section
 
-open scoped Classical BoundedContinuousFunction ENNReal
-open Set Function TopologicalSpace CompactlySupported MeasureTheory NNReal
+open scoped BoundedContinuousFunction NNReal ENNReal
+open Set Function TopologicalSpace CompactlySupported CompactlySupportedContinuousMap
+  MeasureTheory
 
 variable {X : Type*} [TopologicalSpace X]
 variable (Λ : C_c(X, ℝ≥0) →ₗ[ℝ≥0] ℝ≥0)
 
 /-! ### Construction of the content: -/
-
-/-- Given a positive linear functional Λ on X, for `K ⊆ X` compact define
-`λ(K) = inf {Λf | 1≤f on K}`. When X is a compact Hausdorff space, this will be shown to be a
-content, and will be shown to agree with the Riesz measure on the compact subsets `K ⊆ X`. -/
-def rieszContentAux : Compacts X → ℝ≥0 := fun K =>
-  sInf (Λ '' { f : C_c(X, ℝ≥0) | ∀ x ∈ K, (1 : ℝ≥0) ≤ f x })
 
 section Λ_mono
 
@@ -79,9 +75,14 @@ lemma Λ_mono (f₁ f₂ : C_c(X, ℝ≥0)) (h : f₁.1 ≤ f₂.1) : Λ f₁ �
   rw [← hg]
   simp only [map_add, le_add_iff_nonneg_right, zero_le]
 
-
-
 end Λ_mono
+
+/-- Given a positive linear functional `Λ` on continuous compactly supported functions on `X`
+with values in `ℝ≥0`, for `K ⊆ X` compact define `λ(K) = inf {Λf | 1≤f on K}`.
+When `X` is a locally compact T2 space, this will be shown to be a
+content, and will be shown to agree with the Riesz measure on the compact subsets `K ⊆ X`. -/
+def rieszContentAux : Compacts X → ℝ≥0 := fun K =>
+  sInf (Λ '' { f : C_c(X, ℝ≥0) | ∀ x ∈ K, (1 : ℝ≥0) ≤ f x })
 
 section RieszMonotone
 
@@ -111,8 +112,31 @@ theorem rieszContentAux_image_nonempty (K : Compacts X) :
   rw [Real.toNNReal_eq_toNNReal_iff (zero_le_one' ℝ) (hfinicc x).1]
   exact (EqOn.symm hfeq1onK) hx
 
-/-- Riesz content λ (associated with a positive linear functional Λ) is
-monotone: if `K₁ ⊆ K₂` are compact subsets in X, then `λ(K₁) ≤ λ(K₂)`. -/
+/-- For any compact subset `K ⊆ X`, there exist some compactly supported continuous nonnegative
+functions `f` on `X` such that `f ≥ 1` on `K`. -/
+theorem rieszContentAux_image_nonempty (K : Compacts X) :
+    (Λ '' { f : C_c(X, ℝ≥0) | ∀ x ∈ K, (1 : ℝ≥0) ≤ f x }).Nonempty := by
+  rw [image_nonempty]
+  obtain ⟨V, hVcp, hKsubintV⟩ := exists_compact_superset K.2
+  have hIsCompact_closure_interior : IsCompact (closure (interior V)) := by
+    apply IsCompact.of_isClosed_subset hVcp isClosed_closure
+    nth_rw 2 [← closure_eq_iff_isClosed.mpr (IsCompact.isClosed hVcp)]
+    exact closure_mono interior_subset
+  obtain ⟨f, hsuppfsubV, hfeq1onK, hfinicc⟩ :=
+    exists_tsupport_one_of_isOpen_isClosed isOpen_interior hIsCompact_closure_interior
+      (IsCompact.isClosed K.2) hKsubintV
+  have hfHasCompactSupport : HasCompactSupport f :=
+    IsCompact.of_isClosed_subset hVcp (isClosed_tsupport f)
+      (Set.Subset.trans hsuppfsubV interior_subset)
+  use nnrealPart ⟨f, hfHasCompactSupport⟩
+  intro x hx
+  apply le_of_eq
+  simp only [nnrealPart_apply, CompactlySupportedContinuousMap.coe_mk]
+  rw [← Real.toNNReal_one, Real.toNNReal_eq_toNNReal_iff (zero_le_one' ℝ) (hfinicc x).1]
+  exact hfeq1onK.symm hx
+
+/-- Riesz content `λ` (associated with a positive linear functional `Λ`) is
+monotone: if `K₁ ⊆ K₂` are compact subsets in `X`, then `λ(K₁) ≤ λ(K₂)`. -/
 theorem rieszContentAux_mono {K₁ K₂ : Compacts X} (h : K₁ ≤ K₂) :
     rieszContentAux Λ K₁ ≤ rieszContentAux Λ K₂ :=
   csInf_le_csInf (OrderBot.bddBelow _) (rieszContentAux_image_nonempty Λ K₂)
@@ -122,8 +146,8 @@ end RieszMonotone
 
 section RieszSubadditive
 
-/-- Any bounded continuous nonnegative f such that `f ≥ 1` on K gives an upper bound on the
-content of K; namely `λ(K) ≤ Λ f`. -/
+/-- Any compactly supported continuous nonnegative `f` such that `f ≥ 1` on `K` gives an upper bound
+on the content of `K`; namely `λ(K) ≤ Λ f`. -/
 theorem rieszContentAux_le {K : Compacts X} {f : C_c(X, ℝ≥0)} (h : ∀ x ∈ K, (1 : ℝ≥0) ≤ f x) :
     rieszContentAux Λ K ≤ Λ f :=
   csInf_le (OrderBot.bddBelow _) ⟨f, ⟨h, rfl⟩⟩
@@ -131,8 +155,8 @@ theorem rieszContentAux_le {K : Compacts X} {f : C_c(X, ℝ≥0)} (h : ∀ x ∈
 variable [T2Space X] [LocallyCompactSpace X]
 
 /-- The Riesz content can be approximated arbitrarily well by evaluating the positive linear
-functional on test functions: for any `ε > 0`, there exists a bounded continuous nonnegative
-function f on X such that `f ≥ 1` on K and such that `λ(K) ≤ Λ f < λ(K) + ε`. -/
+functional on test functions: for any `ε > 0`, there exists a compactly supported continuous
+nonnegative function `f` on `X` such that `f ≥ 1` on `K` and such that `λ(K) ≤ Λ f < λ(K) + ε`. -/
 theorem exists_lt_rieszContentAux_add_pos (K : Compacts X) {ε : ℝ≥0} (εpos : 0 < ε) :
     ∃ f : C_c(X, ℝ≥0), (∀ x ∈ K, (1 : ℝ≥0) ≤ f x) ∧ Λ f < rieszContentAux Λ K + ε := by
   --choose a test function `f` s.t. `Λf = α < λ(K) + ε`
@@ -143,7 +167,7 @@ theorem exists_lt_rieszContentAux_add_pos (K : Compacts X) {ε : ℝ≥0} (εpos
   rw [f_hyp.right]
   exact α_hyp
 
-/-- The Riesz content λ associated to a given positive linear functional Λ is
+/-- The Riesz content `λ` associated to a given positive linear functional `Λ` is
 finitely subadditive: `λ(K₁ ∪ K₂) ≤ λ(K₁) + λ(K₂)` for any compact subsets `K₁, K₂ ⊆ X`. -/
 theorem rieszContentAux_sup_le (K1 K2 : Compacts X) :
     rieszContentAux Λ (K1 ⊔ K2) ≤ rieszContentAux Λ K1 + rieszContentAux Λ K2 := by
@@ -172,29 +196,24 @@ section PartitionOfUnity
 
 variable [T2Space X] [LocallyCompactSpace X]
 
-lemma exists_sum_one_of_isCompact_nnreal
-    {s : Fin 2 → Set X} {t : Set X} (s_compact : ∀ i, IsCompact (s i))
-    (t_compact : IsCompact t) (disj : Disjoint (s 0) (s 1)) (hst : ⋃ i, s i ⊆ t) :
-    ∃ (f₀ f₁ : C_c(X, ℝ≥0)), EqOn f₀ 1 (s 0) ∧ EqOn f₁ 1 (s 1) ∧ EqOn (f₀ + f₁) 1 t := by
-  set so : Fin 2 → Set X := fun j => if j = 0 then (s 0)ᶜ else (s 1)ᶜ with hso
-  have soopen : ∀ j, IsOpen (so j) := by
-    intro j
-    by_cases h0 : j = 0
-    · rw [h0, hso]
-      simp only [Fin.isValue, ↓reduceIte, isOpen_compl_iff]
-      exact IsCompact.isClosed <| s_compact 0
-    · rw [hso]
-      simp only [Fin.isValue]
-      rw [if_neg h0]
-      simp only [Fin.isValue, isOpen_compl_iff]
-      exact IsCompact.isClosed <| s_compact 1
+lemma exists_continuous_add_one_of_isCompact_nnreal
+    {s₀ s₁ : Set X} {t : Set X} (s₀_compact : IsCompact s₀) (s₁_compact : IsCompact s₁)
+    (t_compact : IsCompact t) (disj : Disjoint s₀ s₁) (hst : s₀ ∪ s₁ ⊆ t) :
+    ∃ (f₀ f₁ : C_c(X, ℝ≥0)), EqOn f₀ 1 s₀ ∧ EqOn f₁ 1 s₁ ∧ EqOn (f₀ + f₁) 1 t := by
+  set so : Fin 2 → Set X := fun j => if j = 0 then s₀ᶜ else s₁ᶜ with hso
+  have soopen (j : Fin 2) :  IsOpen (so j) := by
+    fin_cases j
+    · simp only [hso, Fin.zero_eta, Fin.isValue, ↓reduceIte, isOpen_compl_iff]
+      exact IsCompact.isClosed <| s₀_compact
+    · simp only [hso, Fin.isValue, Fin.mk_one, one_ne_zero, ↓reduceIte, isOpen_compl_iff]
+      exact IsCompact.isClosed <| s₁_compact
   have hsot : t ⊆ ⋃ j, so j := by
     rw [hso]
     simp only [Fin.isValue]
     intro x hx
     rw [mem_iUnion]
-    rw [← subset_compl_iff_disjoint_right, ← compl_compl (s 0), compl_subset_iff_union] at disj
-    have h : x ∈ (s 0)ᶜ ∨ x ∈ (s 1)ᶜ := by
+    rw [← subset_compl_iff_disjoint_right, ← compl_compl s₀, compl_subset_iff_union] at disj
+    have h : x ∈ s₀ᶜ ∨ x ∈ s₁ᶜ := by
       rw [← mem_union, disj]
       trivial
     apply Or.elim h
@@ -208,47 +227,45 @@ lemma exists_sum_one_of_isCompact_nnreal
       exact h1
   obtain ⟨f, f_supp_in_so, sum_f_one_on_t, f_in_icc, f_hcs⟩ :=
     exists_continuous_sum_one_of_isOpen_isCompact soopen t_compact hsot
-  use (nnrealPartCompactlySupported (⟨f 1, f_hcs 1⟩ : C_c(X, ℝ))),
-    (nnrealPartCompactlySupported (⟨f 0, f_hcs 0⟩ : C_c(X, ℝ)))
+  use (nnrealPart (⟨f 1, f_hcs 1⟩ : C_c(X, ℝ))),
+    (nnrealPart (⟨f 0, f_hcs 0⟩ : C_c(X, ℝ)))
   simp only [Fin.isValue, CompactlySupportedContinuousMap.coe_add]
-  have sum_one_x : ∀ x, x ∈ t → (f 0) x + (f 1) x = 1 := by
-    intro x hx
-    let sum_one := sum_f_one_on_t hx
-    simp only [Finset.sum_apply, Fin.sum_univ_two, Fin.isValue, Pi.one_apply] at sum_one
-    exact sum_one
+  have sum_one_x (x : X) (hx : x ∈ t) : (f 0) x + (f 1) x = 1 := by
+    simpa only [Finset.sum_apply, Fin.sum_univ_two, Fin.isValue, Pi.one_apply]
+      using sum_f_one_on_t hx
   refine ⟨?_, ?_, ?_⟩
   · intro x hx
-    simp only [Fin.isValue, nnrealPartCompactlySupported_apply,
+    simp only [Fin.isValue, nnrealPart_apply,
       CompactlySupportedContinuousMap.coe_mk, Pi.one_apply, Real.toNNReal_eq_one]
     have : (f 0) x = 0 := by
       rw [← nmem_support]
-      have : s 0 ⊆ (tsupport (f 0))ᶜ := by
+      have : s₀ ⊆ (tsupport (f 0))ᶜ := by
         apply subset_trans _ (compl_subset_compl.mpr (f_supp_in_so 0))
         rw [hso]
         simp only [Fin.isValue, ↓reduceIte, compl_compl, subset_refl]
       apply not_mem_of_mem_compl
       exact mem_of_subset_of_mem (subset_trans this (compl_subset_compl_of_subset subset_closure))
         hx
-    rw [iUnion_subset_iff] at hst
-    rw [← sum_one_x x (mem_of_subset_of_mem (hst 0) hx), this]
+    rw [union_subset_iff] at hst
+    rw [← sum_one_x x (mem_of_subset_of_mem hst.1 hx), this]
     exact Eq.symm (AddZeroClass.zero_add ((f 1) x))
   · intro x hx
-    simp only [Fin.isValue, nnrealPartCompactlySupported_apply,
+    simp only [Fin.isValue, nnrealPart_apply,
       CompactlySupportedContinuousMap.coe_mk, Pi.one_apply, Real.toNNReal_eq_one]
     have : (f 1) x = 0 := by
       rw [← nmem_support]
-      have : s 1 ⊆ (tsupport (f 1))ᶜ := by
+      have : s₁ ⊆ (tsupport (f 1))ᶜ := by
         apply subset_trans _ (compl_subset_compl.mpr (f_supp_in_so 1))
         rw [hso]
         simp only [Fin.isValue, one_ne_zero, ↓reduceIte, compl_compl, subset_refl]
       apply not_mem_of_mem_compl
       exact mem_of_subset_of_mem (subset_trans this (compl_subset_compl_of_subset subset_closure))
         hx
-    rw [iUnion_subset_iff] at hst
-    rw [← sum_one_x x (mem_of_subset_of_mem (hst 1) hx), this]
+    rw [union_subset_iff] at hst
+    rw [← sum_one_x x (mem_of_subset_of_mem hst.2 hx), this]
     exact Eq.symm (AddMonoid.add_zero ((f 0) x))
   · intro x hx
-    simp only [Fin.isValue, Pi.add_apply, nnrealPartCompactlySupported_apply,
+    simp only [Fin.isValue, Pi.add_apply, nnrealPart_apply,
       CompactlySupportedContinuousMap.coe_mk, Pi.one_apply]
     rw [Real.toNNReal_add_toNNReal (f_in_icc 1 x).1 (f_in_icc 0 x).1, add_comm]
     simp only [Fin.isValue, Real.toNNReal_eq_one]
@@ -264,35 +281,13 @@ lemma rieszContentAux_union {K₁ K₂ : TopologicalSpace.Compacts X}
   refine le_antisymm (rieszContentAux_sup_le Λ K₁ K₂) ?_
   refine le_csInf (rieszContentAux_image_nonempty Λ (K₁ ⊔ K₂)) ?_
   intro b ⟨f, ⟨hf, Λf_eq_b⟩⟩
-  set K : Fin 2 → Set X := fun j => if j = 0 then K₁ else K₂ with hK
-  have K_compact : ∀ j, IsCompact (K j) := by
-    intro j
-    by_cases h0 : j = 0
-    · rw [hK, h0]
-      simp only [Fin.isValue, ↓reduceIte]
-      exact Compacts.isCompact K₁
-    · rw [hK]
-      simp only [Fin.isValue, apply_dite]
-      rw [if_neg h0]
-      exact Compacts.isCompact K₂
   have hsuppf : ∀ x ∈ K₁ ⊔ K₂, x ∈ support f := by
     intro x hx
     rw [mem_support]
     exact Ne.symm (ne_of_lt <| lt_of_lt_of_le (zero_lt_one' ℝ≥0) (hf x hx))
   have hsubsuppf : (K₁ : Set X) ∪ (K₂ : Set X) ⊆ tsupport f := subset_trans hsuppf subset_closure
-  have hKt : ⋃ j, K j ⊆ tsupport f := by
-    apply iUnion_subset
-    intro j
-    by_cases h0 : j = 0
-    · rw [h0, hK]
-      simp only [Fin.isValue, ↓reduceIte]
-      exact (union_subset_iff.mp hsubsuppf).1
-    · rw [hK]
-      simp only [Fin.isValue]
-      rw [if_neg h0]
-      exact (union_subset_iff.mp hsubsuppf).2
-  obtain ⟨g₁, g₂, hg₁, hg₂, sum_g⟩ := exists_sum_one_of_isCompact_nnreal K_compact
-    f.hasCompactSupport'.isCompact disj hKt
+  obtain ⟨g₁, g₂, hg₁, hg₂, sum_g⟩ := exists_continuous_add_one_of_isCompact_nnreal K₁.isCompact'
+    K₂.isCompact' f.hasCompactSupport'.isCompact disj hsubsuppf
   have f_eq_sum : f = g₁ * f + g₂ * f := by
     ext x
     simp only [CompactlySupportedContinuousMap.coe_add, CompactlySupportedContinuousMap.coe_mul,
@@ -315,8 +310,8 @@ lemma rieszContentAux_union {K₁ K₂ : TopologicalSpace.Compacts X}
     simp [hg₂ x_in_K₂, hf x (mem_union_right _ x_in_K₂)]
   exact add_le_add (rieszContentAux_le Λ aux₁) (rieszContentAux_le Λ aux₂)
 
-/-- The contents induced by the linear functional `Λ`. -/
-noncomputable def rieszContent (Λ : (C_c(X, ℝ≥0)) →ₗ[ℝ≥0] ℝ≥0) : Content X where
+/-- The content induced by the linear functional `Λ`. -/
+noncomputable def rieszContent (Λ : C_c(X, ℝ≥0) →ₗ[ℝ≥0] ℝ≥0) : Content X where
   toFun := rieszContentAux Λ
   mono' := fun _ _ ↦ rieszContentAux_mono Λ
   sup_disjoint' := fun _ _ disj _ _ ↦ rieszContentAux_union Λ disj

@@ -143,6 +143,7 @@ import Mathlib.Algebra.Category.MonCat.Adjunctions
 import Mathlib.Algebra.Category.MonCat.Basic
 import Mathlib.Algebra.Category.MonCat.Colimits
 import Mathlib.Algebra.Category.MonCat.FilteredColimits
+import Mathlib.Algebra.Category.MonCat.ForgetCorepresentable
 import Mathlib.Algebra.Category.MonCat.Limits
 import Mathlib.Algebra.Category.Ring.Adjunctions
 import Mathlib.Algebra.Category.Ring.Basic
@@ -527,7 +528,6 @@ import Mathlib.Algebra.Module.Equiv.Basic
 import Mathlib.Algebra.Module.Equiv.Defs
 import Mathlib.Algebra.Module.Equiv.Opposite
 import Mathlib.Algebra.Module.FinitePresentation
-import Mathlib.Algebra.Module.FreeLocus
 import Mathlib.Algebra.Module.GradedModule
 import Mathlib.Algebra.Module.Hom
 import Mathlib.Algebra.Module.Injective
@@ -993,6 +993,7 @@ import Mathlib.AlgebraicGeometry.Noetherian
 import Mathlib.AlgebraicGeometry.OpenImmersion
 import Mathlib.AlgebraicGeometry.Over
 import Mathlib.AlgebraicGeometry.PrimeSpectrum.Basic
+import Mathlib.AlgebraicGeometry.PrimeSpectrum.FreeLocus
 import Mathlib.AlgebraicGeometry.PrimeSpectrum.IsOpenComapC
 import Mathlib.AlgebraicGeometry.PrimeSpectrum.Jacobson
 import Mathlib.AlgebraicGeometry.PrimeSpectrum.Maximal
@@ -1314,6 +1315,7 @@ import Mathlib.Analysis.Distribution.AEEqOfIntegralContDiff
 import Mathlib.Analysis.Distribution.FourierSchwartz
 import Mathlib.Analysis.Distribution.SchwartzSpace
 import Mathlib.Analysis.Fourier.AddCircle
+import Mathlib.Analysis.Fourier.AddCircleMulti
 import Mathlib.Analysis.Fourier.FiniteAbelian.Orthogonality
 import Mathlib.Analysis.Fourier.FiniteAbelian.PontryaginDuality
 import Mathlib.Analysis.Fourier.FourierTransform
@@ -1574,6 +1576,7 @@ import Mathlib.CategoryTheory.Abelian.Generator
 import Mathlib.CategoryTheory.Abelian.GrothendieckAxioms.Basic
 import Mathlib.CategoryTheory.Abelian.GrothendieckAxioms.FunctorCategory
 import Mathlib.CategoryTheory.Abelian.GrothendieckAxioms.Sheaf
+import Mathlib.CategoryTheory.Abelian.GrothendieckCategory
 import Mathlib.CategoryTheory.Abelian.Images
 import Mathlib.CategoryTheory.Abelian.Injective
 import Mathlib.CategoryTheory.Abelian.InjectiveResolution
@@ -1706,6 +1709,7 @@ import Mathlib.CategoryTheory.Endofunctor.Algebra
 import Mathlib.CategoryTheory.Endomorphism
 import Mathlib.CategoryTheory.Enriched.Basic
 import Mathlib.CategoryTheory.Enriched.FunctorCategory
+import Mathlib.CategoryTheory.Enriched.HomCongr
 import Mathlib.CategoryTheory.Enriched.Opposite
 import Mathlib.CategoryTheory.Enriched.Ordinary
 import Mathlib.CategoryTheory.EpiMono
@@ -4497,6 +4501,7 @@ import Mathlib.RingTheory.NonUnitalSubsemiring.Basic
 import Mathlib.RingTheory.NonUnitalSubsemiring.Defs
 import Mathlib.RingTheory.Norm.Basic
 import Mathlib.RingTheory.Norm.Defs
+import Mathlib.RingTheory.Norm.Transitivity
 import Mathlib.RingTheory.NormTrace
 import Mathlib.RingTheory.Nullstellensatz
 import Mathlib.RingTheory.OreLocalization.Basic
@@ -4715,6 +4720,7 @@ import Mathlib.Tactic.CC
 import Mathlib.Tactic.CC.Addition
 import Mathlib.Tactic.CC.Datatypes
 import Mathlib.Tactic.CC.Lemmas
+import Mathlib.Tactic.CC.MkProof
 import Mathlib.Tactic.CancelDenoms
 import Mathlib.Tactic.CancelDenoms.Core
 import Mathlib.Tactic.Cases
@@ -5133,7 +5139,6 @@ import Mathlib.Topology.Compactness.LocallyCompact
 import Mathlib.Topology.Compactness.Paracompact
 import Mathlib.Topology.Compactness.PseudometrizableLindelof
 import Mathlib.Topology.Compactness.SigmaCompact
-import Mathlib.Topology.CompletelyRegular
 import Mathlib.Topology.Connected.Basic
 import Mathlib.Topology.Connected.Clopen
 import Mathlib.Topology.Connected.LocallyConnected
@@ -5168,7 +5173,6 @@ import Mathlib.Topology.ContinuousMap.Units
 import Mathlib.Topology.ContinuousMap.Weierstrass
 import Mathlib.Topology.ContinuousMap.ZeroAtInfty
 import Mathlib.Topology.ContinuousOn
-import Mathlib.Topology.CountableSeparatingOn
 import Mathlib.Topology.Covering
 import Mathlib.Topology.Defs.Basic
 import Mathlib.Topology.Defs.Filter
@@ -5348,8 +5352,14 @@ import Mathlib.Topology.RestrictGen
 import Mathlib.Topology.Semicontinuous
 import Mathlib.Topology.SeparatedMap
 import Mathlib.Topology.Separation.Basic
+import Mathlib.Topology.Separation.CompletelyRegular
+import Mathlib.Topology.Separation.CountableSeparatingOn
 import Mathlib.Topology.Separation.GDelta
+import Mathlib.Topology.Separation.Hausdorff
 import Mathlib.Topology.Separation.NotNormal
+import Mathlib.Topology.Separation.Profinite
+import Mathlib.Topology.Separation.Regular
+import Mathlib.Topology.Separation.SeparatedNhds
 import Mathlib.Topology.Sequences
 import Mathlib.Topology.Sets.Closeds
 import Mathlib.Topology.Sets.Compacts

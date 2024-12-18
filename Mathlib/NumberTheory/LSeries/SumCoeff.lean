@@ -267,11 +267,22 @@ theorem lemmaI {ε : ℝ} (hε : ε > 0) :
   have hs' : 0 ≤ (s - 1) * s := mul_nonneg (sub_nonneg.mpr hs.le) (zero_le_one.trans hs.le)
   let C₁s := ∫ t in Set.Ioc 1 T, (∑ k ∈ Icc 1 ⌊t⌋₊, f k) * (t : ℂ) ^ (- s - 1 : ℂ)
   let C₂s := l * ∫ t in Set.Ioc 1 T, (t : ℂ) ^ (- s : ℂ)
+  have h_intOn₁ : ∀ ⦃a b : ℝ⦄ ⦃c : ℂ⦄, 0 < a →
+      IntegrableOn (fun t : ℝ ↦ (t : ℂ) ^ c) (Set.Ioc a b) :=
+    fun _ _ _ h ↦ integrableOn_Icc_iff_integrableOn_Ioc.mp <|
+      (continuous_ofReal.continuousOn.cpow_const
+        fun x hx ↦ ofReal_mem_slitPlane.mpr (h.trans_le hx.1)).integrableOn_compact isCompact_Icc
+  have h_intOn₂ : ∀ ⦃a : ℝ⦄ ⦃c : ℂ⦄, IntegrableOn (fun t : ℝ ↦ (t : ℂ) ^ c) (Set.Ioi a) := by
+    intro _ _
+    rw [integrableOn_Ioi_cpow_iff]
+
   have hC₁ : ‖C₁s‖ ≤ C₁ := by
     refine le_trans (norm_integral_le_integral_norm _) ?_
     refine setIntegral_mono_on ?_ ?_ measurableSet_Ioc fun t ht ↦ ?_
-    · sorry
-    · sorry
+    · refine Integrable.norm ?_
+      sorry
+    · refine Integrable.norm ?_
+      sorry
     rw [norm_mul, norm_mul]
     refine mul_le_mul_of_nonneg_left ?_ (norm_nonneg _)
     sorry
@@ -280,9 +291,9 @@ theorem lemmaI {ε : ℝ} (hε : ε > 0) :
     refine mul_le_mul_of_nonneg_left ?_ (norm_nonneg _)
     refine le_trans (norm_integral_le_integral_norm _) ?_
     refine setIntegral_mono_on ?_ ?_ measurableSet_Ioc fun t ht ↦ ?_
-    sorry
-    sorry
-    sorry
+    · refine Integrable.norm (h_intOn₁ zero_lt_one)
+    · refine Integrable.norm (h_intOn₁ zero_lt_one)
+    · sorry
   have h_int : (s - 1) * ∫ (t : ℝ) in Set.Ioi 1, t ^ (- s) = 1 := by
     rw [integral_Ioi_rpow_of_lt _ zero_lt_one, Real.one_rpow, neg_div, mul_neg, mul_one_div,
       neg_div', neg_sub', sub_neg_eq_add, div_self]
@@ -293,8 +304,9 @@ theorem lemmaI {ε : ℝ} (hε : ε > 0) :
       mul_neg, mul_one_div, neg_div', neg_sub', sub_neg_eq_add, div_self]
     · exact neg_add_eq_zero.not.mpr <| ofReal_ne_one.mpr hs.ne'
     · rwa [neg_re, ofReal_re, neg_lt_neg_iff]
-  have h_Iio₁ : Set.Ioi 1 = Set.Ioc 1 T ∪ Set.Ioi T := sorry
-  have h_Iio₂ : Disjoint (Set.Ioc 1 T) (Set.Ioi T) := sorry
+  have h_Iio₁ : Set.Ioi 1 = Set.Ioc 1 T ∪ Set.Ioi T := by
+    rw [Set.Ioc_union_Ioi_eq_Ioi (le_max_left 1 T₀)]
+  have h_Iio₂ : Disjoint (Set.Ioc 1 T) (Set.Ioi T) := Set.Ioc_disjoint_Ioi le_rfl
   calc
     _ = ‖(s - 1) * s *
           ((∫ (t : ℝ) in Set.Ioi 1, (∑ k ∈ Icc 1 ⌊t⌋₊, f k) * (t : ℂ) ^ (- s - 1 : ℂ))
@@ -336,23 +348,35 @@ theorem lemmaI {ε : ℝ} (hε : ε > 0) :
   · rw [integral_repr _ zero_le_one, mul_sub, ← mul_assoc _ l, mul_rotate _ _ l,
       mul_assoc, mul_assoc, h_int', mul_one, mul_comm l]
     · rwa [ofReal_re]
-    · sorry
+    · convert summable_of_abel f zero_le_one ?_ ?_ ?_
+      · sorry
+      · sorry
     · exact lemma1 f l hlim
   · rw [h_Iio₁, setIntegral_union h_Iio₂ measurableSet_Ioi, setIntegral_union h_Iio₂
       measurableSet_Ioi]
-    all_goals sorry
+    · refine Continuous.integrableOn_Ioc ?_
+      refine continuous_ofReal_cpow_const ?_
+      sorry
+    · rw [integrableOn_Ioi_cpow_iff]
+      · sorry
+      · sorry
+    · sorry
+    · sorry
   · congr 1
     ring
   · refine le_trans (norm_add_le _ _) <| le_trans (add_le_add_right (norm_sub_le _ _) _) ?_
     rw [norm_mul (((s : ℂ) - 1) * s), norm_mul (((s : ℂ) - 1) * s), norm_mul (((s : ℂ) - 1) * s)]
-    rw [show (((s : ℂ) - 1) * s)  = ((s - 1) * s : ℝ) by sorry, Complex.norm_real,
-      Real.norm_of_nonneg hs']
+    rw [show (((s : ℂ) - 1) * s)  = ((s - 1) * s : ℝ) by rw [ofReal_mul, ofReal_sub,
+      ofReal_one], Complex.norm_real, Real.norm_of_nonneg hs']
   · refine add_le_add (add_le_add ?_ ?_) ?_
     · exact mul_le_mul_of_nonneg_left hC₁ hs'
     · exact mul_le_mul_of_nonneg_left hC₂ hs'
     · rw [integral_sub, integral_mul_left]
       · sorry
-      · sorry
+      · refine Integrable.const_mul ?_ _
+        rw [← IntegrableOn, integrableOn_Ioi_cpow_iff]
+        · sorry
+        · sorry
   · rw [mul_add]
     congr 3
     refine setIntegral_congr_fun measurableSet_Ioi fun t ht ↦ ?_
@@ -363,8 +387,8 @@ theorem lemmaI {ε : ℝ} (hε : ε > 0) :
     exact le_of_le_of_eq (norm_integral_le_integral_norm _) (by simp_rw [norm_mul])
   · refine add_le_add_left (mul_le_mul_of_nonneg_left ?_ hs') _
     refine setIntegral_mono_on ?_ ?_ measurableSet_Ioi ?_
-    · sorry
-    · sorry
+    · sorry -- painful
+    · sorry -- painful
     · intro t ht
       refine mul_le_mul_of_nonneg_right ?_ (norm_nonneg _)
       rw [Real.norm_of_nonneg]
@@ -381,7 +405,10 @@ theorem lemmaI {ε : ℝ} (hε : ε > 0) :
   · rw [integral_mul_left, ← mul_assoc]
     refine add_le_add_left (mul_le_mul_of_nonneg_left ?_ (mul_nonneg hs' hε.le)) _
     refine setIntegral_mono_set ?_ ?_ ?_
-    · sorry
+    · refine Integrable.norm ?_
+      rw [← IntegrableOn, integrableOn_Ioi_cpow_iff]
+      · sorry
+      · sorry
     · filter_upwards with _ using norm_nonneg _
     · exact HasSubset.Subset.eventuallyLE <| Set.Ioi_subset_Ioi (le_max_left 1 T₀)
   · congr 2

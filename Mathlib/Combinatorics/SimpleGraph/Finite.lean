@@ -234,7 +234,7 @@ instance incidenceSetFintype [DecidableEq V] : Fintype (G.incidenceSet v) :=
   Fintype.ofEquiv (G.neighborSet v) (G.incidenceSetEquivNeighborSet v).symm
 
 /-- This is the `Finset` version of `incidenceSet`. -/
-def incidenceFinset [DecidableEq V] : Finset (Sym2 V) :=
+abbrev incidenceFinset [DecidableEq V] : Finset (Sym2 V) :=
   (G.incidenceSet v).toFinset
 
 @[simp]

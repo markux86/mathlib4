@@ -1,0 +1,156 @@
+import Mathlib.Combinatorics.SimpleGraph.AES.Wheel
+import Mathlib.Algebra.BigOperators.Ring
+import Mathlib.Algebra.Order.BigOperators.Group.Finset
+import Mathlib.Tactic.Ring
+local notation "‖" x "‖" => Fintype.card x
+
+variable {a b c k r n i j: ℕ}
+lemma abc (h: a ≤ c) : a * n / (a + b) ≤ c * n / (c + b):=by
+  by_cases ap: a = 0
+  · push_neg at ap; rw [ap,zero_mul, Nat.zero_div];  apply zero_le
+  · have abp : 0 < a + b := a.add_pos_left (a.pos_of_ne_zero ap) b
+    have cbp : 0 < c + b := lt_of_lt_of_le abp <| add_le_add_right h _
+    apply (Nat.le_div_iff_mul_le cbp ).2 <| (mul_le_mul_left abp).1 _
+    rw [← mul_assoc,mul_comm (a+b),mul_comm _ (c*n)]
+    apply (Nat.mul_le_mul_right _ (Nat.div_mul_le_self (a*n) (a+b))).trans
+    rw [mul_comm _ n,mul_comm _ n, mul_assoc,mul_assoc, mul_add a, mul_add c,mul_comm c]
+    apply Nat.mul_le_mul_left
+    apply add_le_add_left <| Nat.mul_le_mul_right _ h
+
+lemma kr_bound (hk: k ≤ r) :
+    (2 * r + 2 + k) * n / (2 * r + 2 + k + 3) ≤ (3 * r + 2) *n / (3 * r + 5):=by
+  apply abc; rw [Nat.succ_mul 2,add_assoc _ r,add_comm r,←add_assoc]
+  apply add_le_add_left hk
+
+namespace SimpleGraph
+open Finset
+variable {α : Type*} {G : SimpleGraph α}   [DecidableRel G.Adj]
+variable {x : α}
+/-- Transform lower bound on non-edges into upper bound on edges -/
+lemma card_adj_of_card_non_adj {s :Finset α} (hx: i ≤ card (s.filter fun z ↦ ¬ G.Adj x z)):
+card (s.filter fun z ↦ G.Adj x z) ≤ s.card - i :=by
+  rw [← filter_card_add_filter_neg_card_eq_card (s:=s) (fun z ↦ G.Adj x z)]
+  rw [add_tsub_assoc_of_le hx]; apply Nat.le_add_right
+
+variable [Fintype α] [DecidableEq α]
+
+/-- Basic double counting given a Finset of vertices s we have:
+ ∑ v ∈ s, d(v) = ∑ v ∈ V, |Γ(v)∩ s|   -/
+lemma sum_degrees_in (s : Finset α) :
+ ∑ v ∈ s, G.degree v = ∑ v, (G.neighborFinset v ∩ s).card  :=by
+  simp only [degree,card_eq_sum_ones]
+  apply sum_comm'
+  intro x y; simp [and_comm,adj_comm]
+
+
+/-- Given lower bounds on non-degrees from W into X and into α we can bound degrees over W-/
+lemma deg_bound {W X : Finset α}
+(hx: ∀ x, x ∈ X → i  ≤ card (W.filter fun z ↦ ¬ G.Adj x z))
+(hy: ∀ y, j ≤ card (W.filter fun z ↦ ¬ G.Adj  y z)):
+    ∑ w ∈ W, G.degree w ≤ X.card * (W.card - i) + Xᶜ.card * (W.card - j) :=by
+  rw [sum_degrees_in,← union_compl X,sum_union disjoint_compl_right]
+  simp only [neighborFinset_eq_filter,filter_inter,univ_inter,card_eq_sum_ones X,
+    card_eq_sum_ones Xᶜ,sum_mul,one_mul]
+  apply add_le_add <;> apply sum_le_sum <;> intro x hx1;
+  · apply card_adj_of_card_non_adj <| hx x hx1
+  · apply card_adj_of_card_non_adj <| hy x
+
+open Classical in
+/-- **Andrasfai-Erdos-Sos**
+If G is Kᵣ₊₁-free and δ(G) > (3r - 4)n/(3r - 1) then G is (r + 1)-colorable
+e.g. K₃-free and δ(G) > 2n/5 then G is 2-colorable -/
+theorem colorable_of_cliqueFree_minDegree_lt (hf: G.CliqueFree (r + 1))
+    (hd : (3 * r - 4) * ‖α‖ / (3 * r - 1) < G.minDegree) : G.Colorable r:= by
+  cases r with
+  | zero => have := cliqueFree_one_iff.1 hf ; apply colorable_of_isEmpty
+  | succ r =>
+  -- First swap G for an edge maximal Kᵣ₊₂-free graph H such that G ≤ H
+  obtain ⟨H,hmcfle,hmcf⟩:=exists_edge_maximal (fun H => H.CliqueFree (r + 2)) hf
+  -- If we can (r + 1)-color H then we can (r + 1)-color G
+  apply Colorable.mono_left hmcfle
+  by_contra! hnotcol
+  -- If H is complete-partite and not (r + 1)-colorable then H contains Kᵣ₊₂
+  have hncp : ¬H.IsCompletePartite := fun hc =>
+    hnotcol <| hc.colorable.mono  <| Nat.le_of_succ_le_succ <| hc.card_lt_of_cliqueFree hmcf.1
+-- Since H is maximally Kᵣ₊₂-free and not complete-partite it contains a wheel of max size
+  obtain ⟨v,w₁,w₂,s,t,hw,hmax⟩:= exists_max_wheel hmcf hncp
+-- The two key sets of vertices are X, consisting of all vertices that are common
+-- neighbours of all of s ∩ t
+  let X := {x | ∀ {y}, y ∈ s ∩ t → H.Adj x y}.toFinset
+-- and W which is simply all the vertices of the wheel
+  let W := hw.verts
+-- Any vertex in X has at least 3 non-neighbors in W (otherwise we can build a bigger wheel)
+  have dXle: ∀ x, x ∈ X → 3 ≤ card (W.filter fun z ↦ ¬ H.Adj  x z):= by
+    intro z hx;
+    simp only [Set.toFinset_setOf, mem_filter, mem_univ, true_and, X] at hx
+    apply hw.three_le_nonadj hmcf hx hmax
+-- Any vertex in α has at least 1 non-neighbor in W
+-- So we have a bound on the degree sum over W
+-- ∑ w in W, degree H w ≤  |X| * (|W| - 3) + |Xᶜ| * (|W| - 1)
+  have boundW :=deg_bound dXle <| hw.one_le_non_adj hmcf.1
+-- Since X consists of all vertices adjacent to all of s ∩ t, so x ∈ Xᶜ → x
+-- has at least one non-neighbour in X
+  have xcle: ∀ x, x ∈ Xᶜ → 1 ≤ card ((s ∩ t).filter fun z ↦ ¬ H.Adj  x z):= by
+    intro x hx
+    apply card_pos.2
+    obtain ⟨_,hy⟩ : ∃ y ∈ s ∩ t, ¬ H.Adj x y := by
+      contrapose! hx
+      simp only [mem_compl,not_not,X,Set.mem_toFinset]
+      intro z hz; apply hx _ hz
+    exact ⟨_,mem_filter.2 hy⟩
+-- So we also have a bound on degree sum over s ∩ t
+-- ∑ w in s ∩ t, degree H w ≤  |Xᶜ| * (|s ∩ t| - 1) + |X| * |s ∩ t|
+  have boundX := deg_bound xcle (fun x ↦ Nat.zero_le _)
+  rw [compl_compl,tsub_zero,add_comm] at boundX
+  let k :=(s ∩ t).card
+-- Now just some inequalities...
+  have krle: (2 * r + k) * ‖α‖ / (2 * r + k + 3) ≤ (3 * r - 1) * ‖α‖ / (3 * r + 2):= by
+    cases r with
+    | zero   => exfalso; apply Nat.not_succ_le_zero _ <| hw.card_clique_free hmcf.1
+    | succ r => apply kr_bound <| Nat.le_of_succ_le_succ <| hw.card_clique_free hmcf.1
+-- Now complete the proof by contradiction
+  apply H.minDegree.le_lt_asymm (le_trans _ krle) <| lt_of_lt_of_le hd
+    <| minDegree_le_minDegree hmcfle
+  rw [Nat.le_div_iff_mul_le (Nat.add_pos_right _ zero_lt_three)]
+--- Two cases s ∩ t = ∅ or not
+  have Wc : W.card + k = 2 * r + 3 := hw.card_verts_add_inter
+  have w3 :=hw.three_le_card_verts
+  by_cases hst : k = 0
+  · rw [hst,add_zero] at Wc ⊢
+    rw [← Wc,← tsub_eq_of_eq_add Wc]
+    have Xu : X = univ:= by
+      apply eq_univ_of_forall
+      rw [card_eq_zero] at hst
+      intro x; simp [X,hst]
+    rw [Xu,card_univ,compl_univ,card_empty,zero_mul,add_zero,mul_comm] at boundW
+    apply le_trans _ boundW;
+    rw [card_eq_sum_ones,mul_sum,mul_one]
+    apply sum_le_sum (fun i _ ↦ H.minDegree_le_degree i)
+--- Now have s ∩ t ≠ ∅
+  · have hap:  (W.card - 1) + 2*(k -1) = (W.card - 3) + 2*k:= by
+      rw [mul_tsub,tsub_add_tsub_comm,tsub_add_eq_add_tsub w3]
+      · rfl
+      · apply le_trans (by decide) w3
+      · apply Nat.mul_le_mul_left _ <| Nat.pos_of_ne_zero hst
+    -- Now a big calc block to the end...
+    calc
+    minDegree H * (2 * r + k + 3) ≤  ∑ w ∈ W, degree H w +  2 * ∑ w ∈ s ∩ t, degree H w :=by
+        rw [add_assoc,add_comm k,← add_assoc,← Wc,add_assoc,←two_mul,mul_add]
+        dsimp [k]
+        rw [card_eq_sum_ones,card_eq_sum_ones,←mul_assoc,mul_sum,mul_sum,mul_one,mul_one,mul_sum]
+        apply add_le_add <;> apply sum_le_sum <;> intro i _;
+        · apply minDegree_le_degree
+        · rw [mul_comm]; apply Nat.mul_le_mul_left ;apply minDegree_le_degree
+
+    _ ≤ X.card * (W.card - 3) + Xᶜ.card*(W.card - 1) + 2 * (X.card * k + Xᶜ.card * (k - 1)) :=by
+        apply add_le_add boundW <| Nat.mul_le_mul_left _ boundX
+
+    _ = X.card * (W.card - 3 + 2 * k) + Xᶜ.card * ((W.card - 1) + 2 * (k - 1)) :=by ring
+
+    _ ≤ (2 * r + k) * ‖α‖:=by
+        rw [hap, ←add_mul,card_compl,add_tsub_cancel_of_le (card_le_univ _),mul_comm]
+        apply Nat.mul_le_mul_right
+        rw [two_mul,← add_assoc]; apply Nat.add_le_add_right
+        rw [tsub_add_eq_add_tsub w3, Wc] ; apply add_tsub_le_right
+
+end SimpleGraph

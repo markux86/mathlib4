@@ -160,6 +160,12 @@ lemma sup_edge_self : G ⊔ edge s s = G := by
 
 variable {s t}
 
+lemma edge_comm : edge s t = edge t s :=by
+  rw [edge, edge, Sym2.eq_swap]
+
+lemma lt_sup_edge (hne: s ≠ t) (hnadj: ¬G.Adj s t ) : G < G ⊔ edge s t:=
+  left_lt_sup.2 fun h => by apply hnadj <| h (by tauto)
+
 lemma edge_edgeSet_of_ne (h : s ≠ t) : (edge s t).edgeSet = {s(s, t)} := by
   rwa [edge, edgeSet_fromEdgeSet, sdiff_eq_left, Set.disjoint_singleton_left, Set.mem_setOf_eq,
     Sym2.isDiag_iff_proj_eq]

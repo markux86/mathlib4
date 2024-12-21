@@ -217,12 +217,50 @@ section DecidableEq
 
 variable [DecidableEq α]
 
-theorem IsNClique.insert (hs : G.IsNClique n s) (h : ∀ b ∈ s, G.Adj a b) :
+protected theorem IsNClique.insert (hs : G.IsNClique n s) (h : ∀ b ∈ s, G.Adj a b) :
     G.IsNClique (n + 1) (insert a s) := by
   constructor
   · push_cast
     exact hs.1.insert fun b hb _ => h _ hb
   · rw [card_insert_of_not_mem fun ha => (h _ ha).ne rfl, hs.2]
+
+lemma IsNClique.erase_of_mem (hs : G.IsNClique (n + 1) s) (ha : a ∈ s) :
+    G.IsNClique n (s.erase a):=by
+  constructor
+  · apply hs.1.subset; simp
+  · rw [card_erase_of_mem ha,hs.2]
+    rfl
+
+lemma IsNClique.erase_of_not_mem (hs : G.IsNClique n s) (ha : a ∉ s): G.IsNClique n (s.erase a):=
+  (erase_eq_of_not_mem ha).symm ▸ hs
+
+lemma IsNClique.insert_erase (hs : G.IsNClique n s) (had: ∀ w ∈ s, w ≠ b → G.Adj a w) (hb : b ∈ s):
+    G.IsNClique n (insert a (erase s b)) := by
+  cases n with
+  | zero => simp_all
+  | succ n =>
+    apply (hs.erase_of_mem hb).insert
+    intro w h; rw [mem_erase] at h
+    apply had w h.2 h.1
+
+lemma IsNClique.insert_insert (h1 : G.IsNClique (n + 1) (insert a s))
+(h2 : G.IsNClique (n + 1) (insert b s)) (h2' : b ∉ s) (hadj : G.Adj a b) :
+    G.IsNClique (n + 2) (insert b ((insert a) s)) := by
+  apply h1.insert
+  intro b hb
+  obtain (rfl | h):=mem_insert.1 hb
+  · exact hadj.symm
+  · apply h2.1
+    · simp
+    · simp [h]
+    · rintro rfl; contradiction
+
+lemma IsNClique.insert_insert_erase (hs: IsNClique G (n + 1) (insert a s)) (hc: c ∈ s) (ha: a ∉ s)
+(had: ∀ w ∈ (insert a s), w ≠ c → G.Adj b w) :
+    IsNClique G (n + 1) (insert a (insert b (erase s c))):= by
+  rw [insert_comm]
+  convert hs.insert_erase had (mem_insert_of_mem hc)
+  rw [erase_insert_of_ne]; rintro rfl; contradiction
 
 theorem is3Clique_triple_iff : G.IsNClique 3 {a, b, c} ↔ G.Adj a b ∧ G.Adj a c ∧ G.Adj b c := by
   simp only [isNClique_iff, isClique_iff, Set.pairwise_insert_of_symmetric G.symm, coe_insert]
@@ -310,6 +348,16 @@ theorem cliqueFree_bot (h : 2 ≤ n) : (⊥ : SimpleGraph α).CliqueFree n := by
   have := le_trans h (isNClique_bot_iff.1 ht).1
   contradiction
 
+lemma cliqueFree_one [IsEmpty α] : G.CliqueFree 1 :=by
+  simp only [CliqueFree, isNClique_one, not_exists, forall_eq_apply_imp_iff]
+  intro v; apply False.elim <| isEmptyElim v
+
+lemma cliqueFree_one_iff : G.CliqueFree 1 ↔ IsEmpty α:=by
+  simp only [CliqueFree, isNClique_one, not_exists, forall_eq_apply_imp_iff];
+  constructor <;> intro h
+  · tauto
+  · intro v; apply h.elim' v
+
 theorem CliqueFree.mono (h : m ≤ n) : G.CliqueFree m → G.CliqueFree n := by
   intro hG s hs
   obtain ⟨t, hts, ht⟩ := exists_subset_card_eq (h.trans hs.card_eq.ge)
@@ -380,35 +428,58 @@ theorem cliqueFree_two : G.CliqueFree 2 ↔ G = ⊥ := by
   · rintro rfl
     exact cliqueFree_bot le_rfl
 
+section DecidableEq
+
+variable[DecidableEq α]
+/-- If s is a clique in G ⊔ {xy} then s-{x} is a clique in G -/
+lemma IsNClique.erase_of_sup_edge_of_mem  {v w : α} (hc: (G ⊔ edge v w).IsNClique (n + 1) s)
+(hx : v ∈ s) : G.IsNClique n (s.erase v):=by
+  constructor
+  · intro u hu v hv huvne
+    push_cast at *
+    obtain (h | h):= (hc.1 hu.1 hv.1 huvne)
+    · exact h
+    · simp only [edge_adj, Set.mem_singleton_iff, Sym2.eq, Sym2.rel_iff', Prod.mk.injEq,
+        Prod.swap_prod_mk, ne_eq] at h
+      exfalso; obtain ⟨⟨rfl,rfl⟩|⟨rfl,rfl⟩,_⟩:=h;
+      · exact hu.2 <| Set.mem_singleton u
+      · exact hv.2 <| Set.mem_singleton v
+  · rw [card_erase_of_mem hx,hc.2]
+    rfl
+
+/-- If G is Kᵣ₊₁-free and s is an r-clique then every vertex is not adjacent to something in s -/
+lemma IsNClique.exists_non_adj_of_cliqueFree_succ (hc : G.IsNClique n s) (h: G.CliqueFree (n + 1))
+(x : α) :  ∃ y, y ∈ s ∧ ¬G.Adj x y:= by
+  by_contra! hf
+  apply (hc.insert hf).not_cliqueFree h
+
+end DecidableEq
+variable  {v w : α}
+/-- If s is a clique in G ⊔ {xy} and x,y ∉ s then s is a clique in G -/
+lemma IsNClique.sup_edge_not_mem (hc: (G ⊔ edge v w).IsNClique n s) (hx : v ∉ s) (hy : w ∉ s) :
+    G.IsNClique n s:=by
+  constructor
+  · intro u hu v hv hne
+    obtain ( h | h ):=(sup_adj ..).1 <| hc.1 hu hv hne
+    · exact h
+    · rw [edge_adj] at h
+      obtain ⟨(⟨rfl,rfl⟩ |⟨rfl,rfl⟩),_⟩:=h <;> contradiction
+  · exact hc.2
+
 /-- Adding an edge increases the clique number by at most one. -/
 protected theorem CliqueFree.sup_edge (h : G.CliqueFree n) (v w : α) :
     (G ⊔ edge v w).CliqueFree (n + 1) := by
-  contrapose h
-  obtain ⟨f, ha⟩ := topEmbeddingOfNotCliqueFree h
-  simp only [ne_eq, top_adj] at ha
-  rw [not_cliqueFree_iff]
-  by_cases mw : w ∈ Set.range f
-  · obtain ⟨x, hx⟩ := mw
-    use ⟨f ∘ x.succAboveEmb, f.2.comp Fin.succAbove_right_injective⟩
-    intro a b
-    simp_rw [Embedding.coeFn_mk, comp_apply, Fin.succAboveEmb_apply, top_adj]
-    have hs := @ha (x.succAbove a) (x.succAbove b)
-    have ia : w ≠ f (x.succAbove a) :=
-      (hx ▸ f.apply_eq_iff_eq x (x.succAbove a)).ne.mpr (x.succAbove_ne a).symm
-    have ib : w ≠ f (x.succAbove b) :=
-      (hx ▸ f.apply_eq_iff_eq x (x.succAbove b)).ne.mpr (x.succAbove_ne b).symm
-    rw [sup_adj, edge_adj] at hs
-    simp only [ia.symm, ib.symm, and_false, false_and, or_false] at hs
-    rw [hs, Fin.succAbove_right_inj]
-  · use ⟨f ∘ Fin.succEmb n, (f.2.of_comp_iff _).mpr (Fin.succ_injective _)⟩
-    intro a b
-    simp only [Fin.val_succEmb, Embedding.coeFn_mk, comp_apply, top_adj]
-    have hs := @ha a.succ b.succ
-    have ia : f a.succ ≠ w := by simp_all
-    have ib : f b.succ ≠ w := by simp_all
-    rw [sup_adj, edge_adj] at hs
-    simp only [ia, ib, and_false, false_and, or_false] at hs
-    rw [hs, Fin.succ_inj]
+    classical
+    rw [CliqueFree] at *;
+    contrapose! h
+    obtain ⟨t,ht⟩:=h
+    by_cases hvw : (v ∉ t) ∧ (w ∉ t)
+    · obtain ⟨s,hs⟩:=exists_subset_card_eq (ht.2 ▸ (Nat.le_add_right ..))
+      exact ⟨_,(ht.sup_edge_not_mem  hvw.1 hvw.2).1.subset hs.1,hs.2⟩
+    · push_neg at hvw
+      by_cases hv : v ∈ t
+      · exact ⟨_,ht.erase_of_sup_edge_of_mem hv⟩
+      · exact ⟨_,(edge_comm ▸ ht).erase_of_sup_edge_of_mem <| (hvw hv)⟩
 
 end CliqueFree
 
@@ -655,5 +726,45 @@ theorem cliqueFinset_map_of_equiv (e : α ≃ β) (n : ℕ) :
   coe_injective <| by push_cast; exact cliqueSet_map_of_equiv _ _ _
 
 end CliqueFinset
+
+section MaxCliqueFree
+variable {x y : α} {n : ℕ} {G}
+
+/-- A graph G is maximally Kᵣ-free if it doesn't contain Kᵣ but any supergraph does contain Kᵣ -/
+abbrev MaxCliqueFree (G : SimpleGraph α) (r : ℕ): Prop :=
+    G.CliqueFree r ∧ ∀ H, G < H → ¬ H.CliqueFree r
+
+/-- If we add a new edge to a maximally r-clique-free graph we get a clique -/
+protected lemma MaxCliqueFree.sup_edge (h: G.MaxCliqueFree n) (hne: x ≠ y) (hnadj: ¬G.Adj x y ):
+    ∃ t, (G ⊔ edge x y).IsNClique n t:=by
+  convert h.2 _ <| G.lt_sup_edge hne hnadj
+  simp [CliqueFree, not_forall, not_not]
+
+variable [DecidableEq α]
+/-- If G is maximally Kᵣ₊₁-free and xy ∉ E(G) then there is a set s such that
+s ∪ {x} and s ∪ {y} are both (r + 1)-cliques -/
+lemma MaxCliqueFree.exists_of_not_adj (h: G.MaxCliqueFree (n + 1)) (hne: x ≠ y) (hnadj: ¬G.Adj x y):
+ ∃ s, x ∉ s ∧ y ∉ s ∧ G.IsNClique n (insert x s) ∧ G.IsNClique n (insert y s) := by
+  obtain ⟨t,hc⟩:= h.sup_edge hne hnadj
+  have xym: x ∈ t ∧ y ∈ t:= by
+    by_contra! hf
+    apply h.1 t;
+    constructor
+    · intro u hu v hv hne
+      obtain (h | h):=(hc.1 hu hv hne)
+      · exact h
+      · simp only [edge_adj, ne_eq] at h
+        exfalso
+        obtain ⟨⟨rfl,rfl⟩|⟨rfl,rfl⟩,_⟩:=h
+        · apply hf hu hv
+        · apply hf hv hu
+    · exact hc.2
+  use (t.erase x).erase y, erase_right_comm (a:=x) ▸ (not_mem_erase _ _),not_mem_erase _ _
+  rw [insert_erase (mem_erase_of_ne_of_mem hne.symm xym.2), erase_right_comm,
+      insert_erase (mem_erase_of_ne_of_mem hne xym.1)]
+  exact ⟨(edge_comm ▸ hc).erase_of_sup_edge_of_mem xym.2,hc.erase_of_sup_edge_of_mem xym.1⟩
+
+end MaxCliqueFree
+
 
 end SimpleGraph

@@ -1,12 +1,20 @@
 import Mathlib.Combinatorics.SimpleGraph.Clique
 import Mathlib.Combinatorics.SimpleGraph.CompletePartite
-import Mathlib.Combinatorics.SimpleGraph.AES.Misc
+
+open Finset
+variable {α : Type*}[DecidableEq α]
+/-- Useful trivial fact about when |{a,b,c,d}| ≤ 2 given a ≠ b , a ≠ d, b ≠ c  -/
+lemma Finset.card_le_two_of_four {a b c d : α} (hab : a ≠ b) (had : a ≠ d) (hbc : b ≠ c)
+(hc2: card {a,b,c,d} ≤ 2): c = a ∧ d = b:=by
+  by_contra! hf
+  apply (card {a, b, c, d}).le_lt_asymm hc2 <| two_lt_card_iff.2 _
+  by_cases hac: a = c <;> simp only [mem_insert,mem_singleton]
+  · exact ⟨a,b,d,Or.inl rfl, Or.inr <| Or.inl rfl,Or.inr <| Or.inr <| Or.inr rfl,hab,had,
+      fun hbd => (hf hac.symm) hbd.symm⟩
+  · exact ⟨a,b,c,Or.inl rfl,Or.inr <| Or.inl rfl,Or.inr <| Or.inr <| Or.inl rfl,hab,hac,hbc⟩
 
 namespace SimpleGraph
-open Finset
-variable {α : Type*} {G : SimpleGraph α} [DecidableEq α] {r : ℕ }
-
-variable (G)
+variable (G : SimpleGraph α) {r : ℕ }
 /-- A IsWheel r structure in G is 3 vertices and two r-sets such that... -/
 structure IsWheel (r : ℕ) (v w₁ w₂ : α) (s t : Finset α) : Prop where
   IsP2Compl : G.IsP2Compl v w₁ w₂ -- w₁w₂ ∈ E(G) but vw₁,vw₂ ∉ E(G)
@@ -25,9 +33,7 @@ lemma exists_IsWheel (h : G.MaxCliqueFree (r + 2))  (hnc : ¬ G.IsCompletePartit
 
 namespace IsWheel
 variable {x v w₁ w₂ : α} {s t : Finset α}
-
 variable (hw : G.IsWheel r v w₁ w₂ s t) include hw
-
 lemma symm :  G.IsWheel r v w₂ w₁ t s := by
   obtain ⟨p2,⟨d1,d2,d3,d4⟩,⟨c1,c2,c3,c4⟩⟩:=hw
   exact ⟨p2.symm,⟨d2,d1,d4,d3⟩,⟨c3,c4,c1,c2⟩⟩
@@ -87,7 +93,7 @@ lemma card_clique_free (h : G.CliqueFree (r + 2)) : card (s ∩ t) < r:=by
   exact (hw.cliques.2.1.insert_insert  (hs ▸ ht.symm ▸ hw.cliques.2.2.2)
     hw.disj'.2 hw.IsP2Compl.edge).not_cliqueFree
 
-omit hw in 
+omit hw in
 /-- If G is maximally Kᵣ₊₂-free and not complete partite then it contains a maximal wheel -/
 lemma _root_.SimpleGraph.exists_max_wheel (h: G.MaxCliqueFree (r + 2)) (hnc : ¬ G.IsCompletePartite)
 : ∃ v w₁ w₂ s t, G.IsWheel r v w₁ w₂ s t ∧ ∀ s' t', G.IsWheel r v w₁ w₂ s' t' →
@@ -110,8 +116,6 @@ lemma exist_non_adj (h: G.CliqueFree (r + 2)) (x : α): ∃ a b c d, a ∈ inser
   obtain ⟨c,hc1,hc2⟩:=hw.cliques.1.exists_non_adj_of_cliqueFree_succ h x
   obtain ⟨d,hd1,hd2⟩:=hw.cliques.2.2.1.exists_non_adj_of_cliqueFree_succ h x
   exact ⟨a,b,c,d,ha1,ha2,hb1,hb2,hc1,hc2,hd1,hd2⟩
-
-
 
 /--This is a warmup for the main lemma `bigger_wheel` where we use it with `card_eq_two_of_four`
 to help build a bigger wheel -/
@@ -276,7 +280,7 @@ lemma three_le_nonadj (hmcf : G.MaxCliqueFree (r + 2)) (hWc: ∀ {y}, y ∈ s �
   apply Nat.not_succ_le_self (card (s ∩ t))
   rw [Nat.succ_eq_add_one, ← card_insert_of_not_mem fun hx => G.loopless x <| hWc hx] at *
   convert (hmax _ _ hbW) using 2
-  rw [insert_inter_insert]
+  rw [← insert_inter_distrib]
   congr! 1
   rw [erase_inter,inter_erase,erase_eq_of_not_mem,erase_eq_of_not_mem]
   · apply not_mem_mono inter_subset_left hw2

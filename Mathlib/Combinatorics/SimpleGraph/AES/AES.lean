@@ -110,7 +110,7 @@ theorem colorable_of_cliqueFree_minDegree_lt (hf: G.CliqueFree (r + 1))
     | succ r => apply kr_bound <| Nat.le_of_succ_le_succ <| hw.card_clique_free hmcf.1
 -- Now complete the proof by contradiction
   apply H.minDegree.le_lt_asymm (le_trans _ krle) <| lt_of_lt_of_le hd
-    <| minDegree_le_minDegree hmcfle
+    <| G.minDegree_le_minDegree hmcfle
   rw [Nat.le_div_iff_mul_le (Nat.add_pos_right _ zero_lt_three)]
 --- Two cases s ∩ t = ∅ or not
   have Wc : W.card + k = 2 * r + 3 := hw.card_verts_add_inter

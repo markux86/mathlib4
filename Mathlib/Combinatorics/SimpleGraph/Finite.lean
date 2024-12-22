@@ -134,15 +134,8 @@ theorem edgeFinset_deleteEdges [DecidableEq V] [Fintype G.edgeSet] (s : Finset (
   ext e
   simp [edgeSet_deleteEdges]
 
-
 section finedges
-variable {H : SimpleGraph V} {G}
-def edgeSetOfLEfintype [Fintype G.edgeSet] [DecidableRel G.Adj]
-[DecidableRel H.Adj](hle : H ≤ G) :
-  Fintype H.edgeSet:= by
-  apply Set.fintypeSubset G.edgeSet
-  simpa using hle
-
+variable {G}
 /-- If `P G` holds and `G` has finitely many edges then there exists an edge minimal
 subgraph H of G for which `P H` holds. -/
 lemma exists_edge_minimal (P : SimpleGraph V → Prop) (hG : P G) [Fintype G.edgeSet] :
@@ -154,15 +147,16 @@ lemma exists_edge_minimal (P : SimpleGraph V → Prop) (hG : P G) [Fintype G.edg
   obtain ⟨H,_,hH⟩:=Nat.find_spec ⟨_,h⟩
   use H, hH.1,hH.2.1
   intro K hK
-  have := edgeSetOfLEfintype hK.le
+  have hFin : Fintype K.edgeSet :=
+    Set.fintypeSubset G.edgeSet (edgeSet_subset_edgeSet.2 <| hK.le.trans hH.1)
   have hKc: K.edgeFinset.card < H.edgeFinset.card :=
     (Finset.card_lt_card <| edgeFinset_ssubset_edgeFinset.2 hK)
   have := Nat.find_min ⟨_,h⟩ (lt_of_lt_of_le hKc hH.2.2)
-  dsimp [p ] at this
+  dsimp [p] at this
   push_neg at this
   intro hF
   apply Nat.lt_irrefl K.edgeFinset.card
-  convert this K (edgeSetOfLEfintype hK.le) (lt_of_lt_of_le hK hH.1).le hF
+  exact this K hFin (lt_of_lt_of_le hK hH.1).le hF
 
 variable [Fintype V]
 /--If V is finite and `P G` holds then there exists a maximal supergraph H of G
@@ -181,7 +175,6 @@ lemma exists_edge_maximal (P : SimpleGraph V → Prop) (hG : P G) :
         <| compl_lt_compl_iff_lt.2 h) hd1) hd2
     use e, hd1.le.trans hle
 end finedges
-
 section DeleteFar
 
 -- Porting note: added `Fintype (Sym2 V)` argument.

@@ -5,9 +5,9 @@ open Finset
 variable {α : Type*}[DecidableEq α]
 /-- Useful trivial fact about when |{a,b,c,d}| ≤ 2 given a ≠ b , a ≠ d, b ≠ c  -/
 lemma Finset.card_le_two_of_four {a b c d : α} (hab : a ≠ b) (had : a ≠ d) (hbc : b ≠ c)
-(hc2: card {a,b,c,d} ≤ 2): c = a ∧ d = b:=by
+(hc2: #{a,b,c,d} ≤ 2): c = a ∧ d = b:=by
   by_contra! hf
-  apply (card {a, b, c, d}).le_lt_asymm hc2 <| two_lt_card_iff.2 _
+  apply (#{a, b, c, d}).le_lt_asymm hc2 <| two_lt_card_iff.2 _
   by_cases hac: a = c <;> simp only [mem_insert,mem_singleton]
   · exact ⟨a,b,d,Or.inl rfl, Or.inr <| Or.inl rfl,Or.inr <| Or.inr <| Or.inr rfl,hab,had,
       fun hbd => (hf hac.symm) hbd.symm⟩
@@ -18,7 +18,7 @@ variable (G : SimpleGraph α) {r : ℕ }
 /-- A IsWheel r structure in G is 3 vertices and two r-sets such that... -/
 structure IsWheel (r : ℕ) (v w₁ w₂ : α) (s t : Finset α) : Prop where
   IsP2Compl : G.IsP2Compl v w₁ w₂ -- w₁w₂ ∈ E(G) but vw₁,vw₂ ∉ E(G)
-  disj : v ∉ s ∧ v ∉ t ∧ w₁ ∉ s ∧ w₂ ∉ t -- v ∉ s,t and w₁ ∉ t and w₂ ∉ s
+  disj : v ∉ s ∧ v ∉ t ∧ w₁ ∉ s ∧ w₂ ∉ t
   cliques : G.IsNClique (r + 1) (insert v s) ∧ G.IsNClique (r + 1) (insert w₁ s)
           ∧ G.IsNClique (r + 1) (insert v t) ∧ G.IsNClique (r + 1) (insert w₂ t)
 
@@ -68,7 +68,7 @@ lemma mem_verts_IsP2Compl  : v ∈ hw.verts ∧ w₁ ∈ hw.verts ∧ w₂ ∈ h
 /-- A wheel consists of the 3 vertices v, w₁, w₂, and the r-sets s , t but the size will vary
 depending on how large |s ∩ t| is, so a useful identity is
 #verts in Wheel =  |s ∪ t| + 3 = 2r + 3 - |s ∩ t|, which we express without subtraction -/
-lemma card_verts_add_inter  : card hw.verts + card (s ∩ t) = 2 * r + 3:=by
+lemma card_verts_add_inter  : #hw.verts + #(s ∩ t) = 2 * r + 3:=by
   rw [verts, card_insert_of_not_mem, add_comm, card_insert_of_not_mem,card_insert_of_not_mem]
   · simp only [←add_assoc,card_inter_add_card_union,two_mul,hw.card_cliques.1,hw.card_cliques.2]
   · rw [mem_union,not_or]
@@ -84,9 +84,8 @@ lemma three_le_card_verts : 3 ≤ hw.verts.card := two_lt_card.2
   ⟨v,hw.mem_verts_IsP2Compl.1,w₁,hw.mem_verts_IsP2Compl.2.1,w₂,
   hw.mem_verts_IsP2Compl.2.2,hw.IsP2Compl.ne.1,hw.IsP2Compl.ne.2,hw.IsP2Compl.edge.ne⟩
 
-/-- If s ∩ t contains an r-set then together with w₁ and w₂ it contains a copy of K_r + 2.
-This implies a bound on k for any W_r,k in a K_r + 2 - free graph -/
-lemma card_clique_free (h : G.CliqueFree (r + 2)) : card (s ∩ t) < r:=by
+/-- If s ∩ t contains an r-set then then s ∪ {w₁,w₂} is Kᵣ₊₂ so -/
+lemma card_clique_free (h : G.CliqueFree (r + 2)) : #(s ∩ t) < r:=by
   contrapose! h
   have hs : s ∩ t = s :=eq_of_subset_of_card_le inter_subset_left (hw.card_cliques.1 ▸ h)
   have ht : s ∩ t = t :=eq_of_subset_of_card_le inter_subset_right (hw.card_cliques.2 ▸ h)
@@ -96,12 +95,12 @@ lemma card_clique_free (h : G.CliqueFree (r + 2)) : card (s ∩ t) < r:=by
 omit hw in
 /-- If G is maximally Kᵣ₊₂-free and not complete partite then it contains a maximal wheel -/
 lemma _root_.SimpleGraph.exists_max_wheel (h: G.MaxCliqueFree (r + 2)) (hnc : ¬ G.IsCompletePartite)
-: ∃ v w₁ w₂ s t, G.IsWheel r v w₁ w₂ s t ∧ ∀ s' t', G.IsWheel r v w₁ w₂ s' t' →
-  (card (s' ∩ t')) ≤ card (s ∩ t):= by
+: ∃ v w₁ w₂ s t, G.IsWheel r v w₁ w₂ s t ∧ ∀ s' t', G.IsWheel r v w₁ w₂ s' t'
+    → #(s' ∩ t') ≤ #(s ∩ t):= by
   classical
   obtain ⟨v,w₁,w₂,s,t,hw⟩:=exists_IsWheel h hnc
-  let P : ℕ → Prop := fun k => ∃ s t, G.IsWheel r v w₁ w₂ s t ∧ card (s ∩ t) = k
-  have : P (card (s ∩ t)) := by use s,t
+  let P : ℕ → Prop := fun k => ∃ s t, G.IsWheel r v w₁ w₂ s t ∧ #(s ∩ t) = k
+  have : P #(s ∩ t) := by use s,t
   have nler := (hw.card_clique_free h.1).le
   obtain ⟨s,t,hw⟩:= Nat.findGreatest_spec nler this
   use v,w₁,w₂,s,t,hw.1
@@ -162,7 +161,7 @@ open Classical
 /-- We can build a wheel with a larger common clique set if there is a core vertex that is
  adjacent to all but at most 2 of the vertices of the wheel -/
 lemma bigger_wheel (h: G.CliqueFree (r + 2)) (hWc: ∀ {y}, y ∈ s ∩ t → G.Adj x y)
-(hsmall : card (hw.verts.filter (fun z => ¬ G.Adj  x z)) ≤ 2) : ∃ a b,  a ∉ t ∧ b ∉ s ∧
+(hsmall : #(hw.verts.filter (fun z => ¬ G.Adj  x z)) ≤ 2) : ∃ a b,  a ∉ t ∧ b ∉ s ∧
     (G.IsWheel r v w₁ w₂ (insert x (s.erase a)) (insert x (t.erase b))) :=by
   obtain ⟨a,b,c,d,ha,haj,hb,hbj,hc,hcj,hd,hdj,hab, had,hbc,hat,hbs⟩:= hw.exist_non_adj_core h hWc
   have ac_bd : c = a ∧ d = b:= by
@@ -207,7 +206,7 @@ lemma bigger_wheel (h: G.CliqueFree (r + 2)) (hWc: ∀ {y}, y ∈ s ∩ t → G.
   have wadj: ∀ w ∈ hw.verts, w ≠ a → w ≠ b → G.Adj w x:=by
     intro z hz haz hbz
     by_contra hf; push_neg at hf
-    have gt2: 2 < card (hw.verts.filter (fun z => ¬ G.Adj x z)):=by
+    have gt2: 2 < #(hw.verts.filter (fun z => ¬ G.Adj x z)):=by
       refine  two_lt_card.2 ⟨a,?_,b ,?_ ,z ,?_ ,hab, haz.symm, hbz.symm⟩ <;> rw [mem_filter]
       · refine ⟨?_,haj⟩
         apply hw.mem_verts.1; left
@@ -264,7 +263,7 @@ lemma bigger_wheel (h: G.CliqueFree (r + 2)) (hWc: ∀ {y}, y ∈ s ∩ t → G.
 
 /-- For any x there is a wheelvertex that is not adjacent to x (in fact there is one in s+w₁) -/
 lemma one_le_non_adj  (hcf: G.CliqueFree (r + 2)) (x : α) :
-    1 ≤ card (hw.verts.filter (fun z => ¬ G.Adj  x z)):=by
+    1 ≤ #(hw.verts.filter (fun z => ¬ G.Adj  x z)):=by
   apply card_pos.2
   obtain ⟨_,hz⟩:=hw.cliques.2.1.exists_non_adj_of_cliqueFree_succ hcf x
   exact ⟨_,mem_filter.2 ⟨hw.mem_verts.1 (Or.inl hz.1),hz.2⟩⟩
@@ -272,12 +271,12 @@ lemma one_le_non_adj  (hcf: G.CliqueFree (r + 2)) (x : α) :
 /-- If G is Kᵣ₊₂-free contains a MaxWheel W then every vertex that is adjacent to all of the common
 clique vertices is not adjacent to at least 3 vertices in W -/
 lemma three_le_nonadj (hmcf : G.MaxCliqueFree (r + 2)) (hWc: ∀ {y}, y ∈ s ∩ t → G.Adj x y)
-(hmax: ∀ s' t', G.IsWheel r v w₁ w₂ s' t' → card (s' ∩ t') ≤ card (s ∩ t)) :
-    3 ≤ card (hw.verts.filter fun z => ¬ G.Adj  x z) :=by
+(hmax: ∀ s' t', G.IsWheel r v w₁ w₂ s' t' → #(s' ∩ t') ≤ #(s ∩ t)) :
+    3 ≤ #(hw.verts.filter fun z => ¬ G.Adj  x z) :=by
   by_contra! hc; change _ + 1 ≤ _ + 1 at hc
   simp only [Nat.reduceLeDiff] at hc
   obtain ⟨c,d,hw1,hw2,hbW⟩:= hw.bigger_wheel hmcf.1 hWc hc
-  apply Nat.not_succ_le_self (card (s ∩ t))
+  apply Nat.not_succ_le_self #(s ∩ t)
   rw [Nat.succ_eq_add_one, ← card_insert_of_not_mem fun hx => G.loopless x <| hWc hx] at *
   convert (hmax _ _ hbW) using 2
   rw [← insert_inter_distrib]

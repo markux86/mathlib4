@@ -262,6 +262,22 @@ lemma IsNClique.insert_insert_erase (hs: IsNClique G (n + 1) (insert a s)) (hc: 
   convert hs.insert_erase had (mem_insert_of_mem hc)
   rw [erase_insert_of_ne]; rintro rfl; contradiction
 
+/-- If s is a clique in G ⊔ {xy} then s-{x} is a clique in G -/
+lemma IsNClique.erase_of_sup_edge_of_mem  {v w : α} (hc: (G ⊔ edge v w).IsNClique (n + 1) s)
+(hx : v ∈ s) : G.IsNClique n (s.erase v):=by
+  constructor
+  · intro u hu v hv huvne
+    push_cast at *
+    obtain (h | h):= (hc.1 hu.1 hv.1 huvne)
+    · exact h
+    · simp only [edge_adj, Set.mem_singleton_iff, Sym2.eq, Sym2.rel_iff', Prod.mk.injEq,
+        Prod.swap_prod_mk, ne_eq] at h
+      exfalso; obtain ⟨⟨rfl,rfl⟩|⟨rfl,rfl⟩,_⟩:=h;
+      · exact hu.2 <| Set.mem_singleton u
+      · exact hv.2 <| Set.mem_singleton v
+  · rw [card_erase_of_mem hx,hc.2]
+    rfl
+
 theorem is3Clique_triple_iff : G.IsNClique 3 {a, b, c} ↔ G.Adj a b ∧ G.Adj a c ∧ G.Adj b c := by
   simp only [isNClique_iff, isClique_iff, Set.pairwise_insert_of_symmetric G.symm, coe_insert]
   by_cases hab : a = b <;> by_cases hbc : b = c <;> by_cases hac : a = c <;> subst_vars <;>
@@ -348,15 +364,9 @@ theorem cliqueFree_bot (h : 2 ≤ n) : (⊥ : SimpleGraph α).CliqueFree n := by
   have := le_trans h (isNClique_bot_iff.1 ht).1
   contradiction
 
-lemma cliqueFree_one [IsEmpty α] : G.CliqueFree 1 :=by
-  simp only [CliqueFree, isNClique_one, not_exists, forall_eq_apply_imp_iff]
-  intro v; apply False.elim <| isEmptyElim v
-
-lemma cliqueFree_one_iff : G.CliqueFree 1 ↔ IsEmpty α:=by
-  simp only [CliqueFree, isNClique_one, not_exists, forall_eq_apply_imp_iff];
-  constructor <;> intro h
-  · tauto
-  · intro v; apply h.elim' v
+lemma isEmpty_of_cliqueFree_one (h : G.CliqueFree 1) : IsEmpty α:=by
+  simp only [CliqueFree, isNClique_one, not_exists, forall_eq_apply_imp_iff] at h
+  tauto
 
 theorem CliqueFree.mono (h : m ≤ n) : G.CliqueFree m → G.CliqueFree n := by
   intro hG s hs
@@ -431,22 +441,6 @@ theorem cliqueFree_two : G.CliqueFree 2 ↔ G = ⊥ := by
 section DecidableEq
 
 variable[DecidableEq α]
-/-- If s is a clique in G ⊔ {xy} then s-{x} is a clique in G -/
-lemma IsNClique.erase_of_sup_edge_of_mem  {v w : α} (hc: (G ⊔ edge v w).IsNClique (n + 1) s)
-(hx : v ∈ s) : G.IsNClique n (s.erase v):=by
-  constructor
-  · intro u hu v hv huvne
-    push_cast at *
-    obtain (h | h):= (hc.1 hu.1 hv.1 huvne)
-    · exact h
-    · simp only [edge_adj, Set.mem_singleton_iff, Sym2.eq, Sym2.rel_iff', Prod.mk.injEq,
-        Prod.swap_prod_mk, ne_eq] at h
-      exfalso; obtain ⟨⟨rfl,rfl⟩|⟨rfl,rfl⟩,_⟩:=h;
-      · exact hu.2 <| Set.mem_singleton u
-      · exact hv.2 <| Set.mem_singleton v
-  · rw [card_erase_of_mem hx,hc.2]
-    rfl
-
 /-- If G is Kᵣ₊₁-free and s is an r-clique then every vertex is not adjacent to something in s -/
 lemma IsNClique.exists_non_adj_of_cliqueFree_succ (hc : G.IsNClique n s) (h: G.CliqueFree (n + 1))
 (x : α) :  ∃ y, y ∈ s ∧ ¬G.Adj x y:= by

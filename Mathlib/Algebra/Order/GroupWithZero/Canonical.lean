@@ -88,13 +88,13 @@ lemma bot_eq_zero'' : (0 : α) = ⊥ := eq_of_forall_ge_iff fun _ ↦ by simp
 
 instance instLinearOrderedAddCommMonoidWithTopAdditiveOrderDual :
     LinearOrderedAddCommMonoidWithTop (Additive αᵒᵈ) where
-  top := (0 : α)
-  top_add' := fun a ↦ zero_mul a.toMul
-  le_top := fun _ ↦ zero_le'
+  top := .ofMul <| .toDual 0
+  top_add' a := zero_mul a.toMul.ofDual
+  le_top _ := zero_le'
 
 instance instLinearOrderedAddCommMonoidWithTopOrderDualAdditive :
     LinearOrderedAddCommMonoidWithTop (Additive α)ᵒᵈ where
-  top := OrderDual.toDual (Additive.ofMul 0)
+  top := .toDual <| .ofMul _
   top_add' := fun a ↦ zero_mul (Additive.toMul (OrderDual.ofDual a))
   le_top := fun a ↦ @zero_le' _ _ (Additive.toMul (OrderDual.ofDual a))
 

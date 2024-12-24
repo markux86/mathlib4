@@ -313,6 +313,36 @@ theorem DifferentiableWithinAt.differentiableAt (h : DifferentiableWithinAt 𝕜
     (hs : s ∈ 𝓝 x) : DifferentiableAt 𝕜 f x :=
   h.imp fun _ hf' => hf'.hasFDerivAt hs
 
+/-- If `x` is isolated in `s`, then `f` has any derivative at `x` within `s`,
+as this statement is empty. -/
+theorem HasFDerivWithinAt.of_nhdsWithin_eq_bot [T1Space E] (h : 𝓝[s\{x}] x = ⊥) :
+    HasFDerivWithinAt f f' s x := by
+  rw [← hasFDerivWithinAt_diff_singleton x, HasFDerivWithinAt, h,
+    hasFDerivAtFilter_iff_isLittleOTVS]
+  -- TODO
+  -- apply isLittleOTVS_bot
+  simp [IsLittleOTVS]
+  intros U hU
+  refine ⟨{0}, ?_⟩
+  rw [@_root_.mem_nhds_iff]
+  use {0}
+  simp [isOpen_singleton_iff]
+
+/-- If `x` is not in the closure of `s`, then `f` has any derivative at `x` within `s`,
+as this statement is empty. -/
+theorem hasFDerivWithinAt_of_nmem_closure [T1Space E] (h : x ∉ closure s) :
+    HasFDerivWithinAt f f' s x :=
+  .of_nhdsWithin_eq_bot <| eq_bot_mono (nhdsWithin_mono _ diff_subset) <| by
+    rwa [mem_closure_iff_nhdsWithin_neBot, not_neBot] at h
+
+theorem fderivWithin_zero_of_isolated [T1Space E] (h : 𝓝[s \ {x}] x = ⊥) :
+    fderivWithin 𝕜 f s x = 0 := by
+  rw [fderivWithin, if_pos (.of_nhdsWithin_eq_bot h)]
+
+theorem fderivWithin_zero_of_nmem_closure [T1Space E] (h : x ∉ closure s) :
+    fderivWithin 𝕜 f s x = 0 := by
+  rw [fderivWithin, if_pos (hasFDerivWithinAt_of_nmem_closure h)]
+
 theorem DifferentiableWithinAt.hasFDerivWithinAt (h : DifferentiableWithinAt 𝕜 f s x) :
     HasFDerivWithinAt f (fderivWithin 𝕜 f s x) s x := by
   simp only [fderivWithin, dif_pos h]

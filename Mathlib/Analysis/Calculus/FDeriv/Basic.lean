@@ -273,6 +273,24 @@ lemma hasFDerivWithinAt_of_isOpen (h : IsOpen s) (hx : x ∈ s) :
     HasFDerivWithinAt f f' s x ↔ HasFDerivAt f f' x :=
   hasFDerivWithinAt_of_mem_nhds (h.mem_nhds hx)
 
+theorem hasFDerivWithinAt_insert {y : E} [T1Space E] :
+    HasFDerivWithinAt f f' (insert y s) x ↔ HasFDerivWithinAt f f' s x := by
+  rcases eq_or_ne x y with (rfl | h)
+  · simp_rw [HasFDerivWithinAt, hasFDerivAtFilter_iff_isLittleOTVS]
+    apply isLittleOTVS_insert
+    simp only [sub_self, map_zero]
+  refine ⟨fun h => h.mono <| subset_insert y s, fun hf => hf.mono_of_mem_nhdsWithin ?_⟩
+  simp_rw [nhdsWithin_insert_of_ne h, self_mem_nhdsWithin]
+
+alias ⟨HasFDerivWithinAt.of_insert, HasFDerivWithinAt.insert'⟩ := hasFDerivWithinAt_insert
+
+protected theorem HasFDerivWithinAt.insert [T1Space E] (h : HasFDerivWithinAt g g' s x) :
+    HasFDerivWithinAt g g' (insert x s) x :=
+  h.insert'
+
+theorem hasFDerivWithinAt_diff_singleton [T1Space E] (y : E) :
+    HasFDerivWithinAt f f' (s \ {y}) x ↔ HasFDerivWithinAt f f' s x := by
+  rw [← hasFDerivWithinAt_insert, insert_diff_singleton, hasFDerivWithinAt_insert]
 
 theorem hasFDerivWithinAt_inter' (h : t ∈ 𝓝[s] x) :
     HasFDerivWithinAt f f' (s ∩ t) x ↔ HasFDerivWithinAt f f' s x := by
@@ -281,6 +299,11 @@ theorem hasFDerivWithinAt_inter' (h : t ∈ 𝓝[s] x) :
 theorem hasFDerivWithinAt_inter (h : t ∈ 𝓝 x) :
     HasFDerivWithinAt f f' (s ∩ t) x ↔ HasFDerivWithinAt f f' s x := by
   simp [HasFDerivWithinAt, nhdsWithin_restrict' s h]
+
+theorem HasFDerivWithinAt.union (hs : HasFDerivWithinAt f f' s x)
+    (ht : HasFDerivWithinAt f f' t x) : HasFDerivWithinAt f f' (s ∪ t) x := by
+  simp only [HasFDerivWithinAt, nhdsWithin_union]
+  exact .of_isLittleOTVS <| hs.isLittleOTVS.sup ht.isLittleOTVS
 
 theorem HasFDerivWithinAt.hasFDerivAt (h : HasFDerivWithinAt f f' s x) (hs : s ∈ 𝓝 x) :
     HasFDerivAt f f' x := by
@@ -460,25 +483,6 @@ theorem HasFDerivAt.le_of_lipschitz {f : E → F} {f' : E →L[𝕜] F} {x₀ : 
     {C : ℝ≥0} (hlip : LipschitzWith C f) : ‖f'‖ ≤ C :=
   hf.le_of_lipschitzOn univ_mem (lipschitzOnWith_univ.2 hlip)
 
-theorem hasFDerivWithinAt_insert {y : E} :
-    HasFDerivWithinAt f f' (insert y s) x ↔ HasFDerivWithinAt f f' s x := by
-  rcases eq_or_ne x y with (rfl | h)
-  · simp_rw [HasFDerivWithinAt, hasFDerivAtFilter_iff_isLittleO]
-    apply Asymptotics.isLittleO_insert
-    simp only [sub_self, map_zero]
-  refine ⟨fun h => h.mono <| subset_insert y s, fun hf => hf.mono_of_mem_nhdsWithin ?_⟩
-  simp_rw [nhdsWithin_insert_of_ne h, self_mem_nhdsWithin]
-
-alias ⟨HasFDerivWithinAt.of_insert, HasFDerivWithinAt.insert'⟩ := hasFDerivWithinAt_insert
-
-protected theorem HasFDerivWithinAt.insert (h : HasFDerivWithinAt g g' s x) :
-    HasFDerivWithinAt g g' (insert x s) x :=
-  h.insert'
-
-theorem hasFDerivWithinAt_diff_singleton (y : E) :
-    HasFDerivWithinAt f f' (s \ {y}) x ↔ HasFDerivWithinAt f f' s x := by
-  rw [← hasFDerivWithinAt_insert, insert_diff_singleton, hasFDerivWithinAt_insert]
-
 theorem HasStrictFDerivAt.isBigO_sub (hf : HasStrictFDerivAt f f' x) :
     (fun p : E × E => f p.1 - f p.2) =O[𝓝 (x, x)] fun p : E × E => p.1 - p.2 :=
   hf.isLittleO.isBigO.congr_of_sub.2 (f'.isBigO_comp _ _)
@@ -528,11 +532,6 @@ theorem HasFDerivAt.lim (hf : HasFDerivAt f f' x) (v : E) {α : Type*} {c : α �
 theorem HasFDerivAt.unique (h₀ : HasFDerivAt f f₀' x) (h₁ : HasFDerivAt f f₁' x) : f₀' = f₁' := by
   rw [← hasFDerivWithinAt_univ] at h₀ h₁
   exact uniqueDiffWithinAt_univ.eq h₀ h₁
-
-theorem HasFDerivWithinAt.union (hs : HasFDerivWithinAt f f' s x)
-    (ht : HasFDerivWithinAt f f' t x) : HasFDerivWithinAt f f' (s ∪ t) x := by
-  simp only [HasFDerivWithinAt, nhdsWithin_union]
-  exact .of_isLittleO <| hs.isLittleO.sup ht.isLittleO
 
 /-- If `x` is isolated in `s`, then `f` has any derivative at `x` within `s`,
 as this statement is empty. -/

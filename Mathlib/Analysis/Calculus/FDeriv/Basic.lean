@@ -556,25 +556,6 @@ theorem HasFDerivAt.unique (h₀ : HasFDerivAt f f₀' x) (h₁ : HasFDerivAt f 
   rw [← hasFDerivWithinAt_univ] at h₀ h₁
   exact uniqueDiffWithinAt_univ.eq h₀ h₁
 
-/-- If `x` is isolated in `s`, then `f` has any derivative at `x` within `s`,
-as this statement is empty. -/
-theorem HasFDerivWithinAt.of_nhdsWithin_eq_bot (h : 𝓝[s\{x}] x = ⊥) :
-    HasFDerivWithinAt f f' s x := by
-  rw [← hasFDerivWithinAt_diff_singleton x, HasFDerivWithinAt, h, hasFDerivAtFilter_iff_isLittleO]
-  apply isLittleO_bot
-
-/-- If `x` is not in the closure of `s`, then `f` has any derivative at `x` within `s`,
-as this statement is empty. -/
-theorem hasFDerivWithinAt_of_nmem_closure (h : x ∉ closure s) : HasFDerivWithinAt f f' s x :=
-  .of_nhdsWithin_eq_bot <| eq_bot_mono (nhdsWithin_mono _ diff_subset) <| by
-    rwa [mem_closure_iff_nhdsWithin_neBot, not_neBot] at h
-
-theorem fderivWithin_zero_of_isolated (h : 𝓝[s \ {x}] x = ⊥) : fderivWithin 𝕜 f s x = 0 := by
-  rw [fderivWithin, if_pos (.of_nhdsWithin_eq_bot h)]
-
-theorem fderivWithin_zero_of_nmem_closure (h : x ∉ closure s) : fderivWithin 𝕜 f s x = 0 := by
-  rw [fderivWithin, if_pos (hasFDerivWithinAt_of_nmem_closure h)]
-
 protected theorem HasFDerivAt.fderiv (h : HasFDerivAt f f' x) : fderiv 𝕜 f x = f' := by
   ext
   rw [h.unique h.differentiableAt.hasFDerivAt]

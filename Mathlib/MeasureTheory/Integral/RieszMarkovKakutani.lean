@@ -375,7 +375,7 @@ section RieszMeasure
 variable [T2Space X] [LocallyCompactSpace X] [MeasurableSpace X] [BorelSpace X]
 
 /-- `rieszContent` is promoted to a measure. -/
-def μ := (MeasureTheory.Content.measure (rieszContent Λ))
+def μ := (rieszContent Λ).measure
 
 lemma leRieszMeasure_Compacts {f : C_c(X, ℝ≥0)} (hf : ∀ (x : X), f x ≤ 1) {K : Compacts X}
     (h : tsupport f ⊆ K) : ENNReal.ofReal (Λ f) ≤ (μ Λ) K := by
@@ -412,268 +412,272 @@ variable [T2Space X] [LocallyCompactSpace X] [MeasurableSpace X] [BorelSpace X]
 variable (f : C(X, ℝ≥0∞))
 #check ∫⁻ (x : X), f x ∂(μ Λ)
 
+#check μ Λ
+#synth ClosedIciTopology ℝ≥0
+
 /-- The Riesz-Markov-Kakutani theorem. -/
 theorem RMK [Nonempty X] : ∀ (f : C_c(X, ℝ≥0)), ∫⁻ (x : X), f x ∂(μ Λ) = Λ f := by
   intro f
-  have RMK_le : ∀ (f : C_c(X, ℝ≥0)), Λ f ≤ ∫⁻ (x : X), f x ∂(μ Λ) := by
+  have RMK_le : ∀ (f : C_c(X, ℝ≥0)), Λ f ≤ ∫ (x : X), ((f x) : ℝ) ∂μ Λ := by
     intro f
+-- use IsCompact.exists_isMaxOn
     set L := Set.range f with hLdef
     have hL : IsCompact L := by exact HasCompactSupport.isCompact_range f.2 f.1.2
     have hLNonempty : Nonempty L := instNonemptyRange f
     have BddBelow_bbdAbove_L := isBounded_iff_bddBelow_bddAbove.mp
       (Metric.isCompact_iff_isClosed_bounded.mp hL).2
-    obtain ⟨a, ha⟩ := BddBelow_bbdAbove_L.1
+    -- obtain ⟨a, ha⟩ := BddBelow_bbdAbove_L.1
     obtain ⟨b, hb⟩ := BddBelow_bbdAbove_L.2
-    have hafx : ∀ (x : X), a ≤ f x := by
-      intro x
-      apply ha
-      rw [hLdef]
-      simp only [mem_range, exists_apply_eq_apply]
+    -- have hafx : ∀ (x : X), a ≤ f x := by
+    --   intro x
+    --   apply ha
+    --   rw [hLdef]
+    --   simp only [mem_range, exists_apply_eq_apply]
     have hfxb : ∀ (x : X), f x ≤ b:= by
       intro x
       apply hb
       rw [hLdef]
       simp only [mem_range, exists_apply_eq_apply]
-    have hab : a ≤ b := by
-      obtain ⟨c, hc⟩ := hLNonempty
-      exact le_trans (mem_lowerBounds.mp ha c hc) (mem_upperBounds.mp hb c hc)
+    -- have hab : a ≤ b := by
+    --   obtain ⟨c, hc⟩ := hLNonempty
+    --   exact le_trans (mem_lowerBounds.mp ha c hc) (mem_upperBounds.mp hb c hc)
+    -- have habnonneg : 0 ≤ |a| + b := by
+    --   apply le_trans _ (add_le_add_right (neg_le_abs a) b)
+    --   simp only [le_neg_add_iff_add_le, add_zero]
+    --   exact hab
+    apply le_iff_forall_pos_le_add.mpr
+    intro ε hε
+    have hltε : ∃ (ε' : ℝ), 0 < ε' ∧
+        ε' * (2 * ((μ Λ) (tsupport f)).toReal + b + ε') < ε := by
+      set A := 2 * ((μ Λ) (tsupport f)).toReal + b with hA
+      use ε / (4 * A + 2 + 2 * ε)
+      have hAnonneg : 0 ≤ A := by
+        rw [hA]
+        apply add_nonneg _ _
+        simp only [Nat.ofNat_pos, mul_nonneg_iff_of_pos_left, ENNReal.toReal_nonneg]
+        exact NNReal.zero_le_coe
+      constructor
+      · apply div_pos hε
+        linarith
+      · rw [left_distrib]
+        have h1 : ε / (4 * A + 2 + 2 * ε) * A < ε / 2 := by
+          rw [← mul_div_right_comm, mul_div_assoc]
+          nth_rw 3 [← mul_one ε]
+          rw [mul_div_assoc]
+          apply mul_lt_mul_of_pos_left _ hε
+          apply (div_lt_div_iff₀ _ two_pos).mpr
+          · linarith
+          · linarith
+        have h2 : ε / (4 * A + 2 + 2 * ε) < ε / 2 := by
+          apply div_lt_div_of_pos_left hε two_pos
+          linarith
+        have h3 : 0 < 4 * A + 2 + 2 * ε := by
+          linarith
+        have h4 : ε / (4 * A + 2 + 2 * ε) * (ε / (4 * A + 2 + 2 * ε)) < ε / 2 := by
+          rw [_root_.lt_div_iff₀ two_pos, mul_comm, ← mul_div_assoc, ← mul_div_assoc,
+            div_lt_iff₀ h3, ← mul_assoc, mul_comm, ← mul_assoc, ← mul_div_assoc, div_lt_iff₀ h3,
+            mul_assoc, mul_assoc]
+          apply mul_lt_mul_of_pos_left _ hε
+          have h41 : 2 < 4 * A + 2 + 2 * ε := by
+            linarith
+          have h42 : ε < 4 * A + 2 + 2 * ε := by
+            linarith
+          exact mul_lt_mul h41 (le_of_lt h42) hε (le_of_lt h3)
+        nth_rw 7 [← add_halves ε]
+        exact add_lt_add h1 h4
+    obtain ⟨ε', hε'⟩ := hltε
+    apply le_of_lt (lt_of_le_of_lt _ (add_lt_add_left hε'.2 _))
+    set δ := ε' / 2 with hδ
+    have hδpos : 0 < δ := by
+      rw [hδ]
+      exact div_pos hε'.1 two_pos
+    set N := b / δ with hN
+    have hNNonneg : 0 ≤ N :=
+      by exact div_nonneg b.prop (le_of_lt hδpos)
+    set y : ℤ → ℝ := fun n => b + δ * (n - (⌈N⌉₊+1)) with hy
+    have ymono : ∀ (j k : ℤ), y j < y k → j < k := by
+      intro j k
+      rw [hy]
+      simp only [add_lt_add_iff_left]
+      intro h
+      apply (@Int.cast_lt ℝ).mp
+      apply @lt_of_tsub_lt_tsub_right ℝ j k (⌈N⌉₊ + 1)
+      exact lt_of_mul_lt_mul_left h (le_of_lt hδpos)
+    have hy1leyn : ∀ (n : Fin (⌈N⌉₊ + 1)), y 1 ≤ y (n + 1) := by
+      intro n
+      rw [hy]
+      simp only [Int.cast_one, sub_add_cancel_right, mul_neg, Int.cast_add, Int.cast_natCast,
+        add_sub_add_right_eq_sub, add_lt_add_iff_left]
+      rw [_root_.mul_sub]
+      apply le_add_neg_iff_le.mp
+      ring_nf
+      simp only [one_div, gt_iff_lt, inv_pos, Nat.ofNat_pos, mul_nonneg_iff_of_pos_right]
+      exact mul_nonneg (le_of_lt hε'.1) (Nat.cast_nonneg _)
+    have hymono' : ∀ (m n : Fin (⌈N⌉₊ + 1)), m ≤ n → (y m).toNNReal ≤ (y n).toNNReal := by
+      intro m n hmn
+      rw [hy]
+      simp only [Int.cast_natCast, add_le_add_iff_left]
+      rw [_root_.mul_sub, _root_.mul_sub]
+      apply Real.toNNReal_le_toNNReal
+      simp only [add_le_add_iff_left, tsub_le_iff_right, sub_add_cancel]
+      apply mul_le_mul_of_nonneg_left _ (le_of_lt hδpos)
+      rw [Nat.cast_le]
+      simp only [Fin.val_fin_le]
+      exact hmn
+    have hy0 : y 0 < 0 := by
+      rw [hy, hN]
+      simp only [Int.cast_zero, Int.ceil_add_one, Int.cast_add, Int.cast_one, zero_sub, neg_add_rev]
+      apply lt_tsub_iff_left.mp
+      apply (lt_div_iff₀' hδpos).mp
+      simp only [add_neg_lt_iff_lt_add]
+      rw [neg_lt_iff_pos_add, add_assoc, ← neg_lt_iff_pos_add']
+      apply lt_add_of_lt_add_right _ (Nat.le_ceil _)
+      rw [neg_lt_iff_pos_add]
+      apply pos_of_mul_pos_left _ (le_of_lt hδpos)
+      rw [add_mul, add_mul, div_mul, div_mul, div_self (Ne.symm (ne_of_lt hδpos))]
+      simp only [div_one, one_mul]
+      linarith
+    set E : ℤ → Set X := fun n => (f ⁻¹' Ioc (y n).toNNReal (y (n+1)).toNNReal) ∩ (tsupport f)
+      with hE
+    set Erest : Fin (⌈N⌉₊ + 1) → Set X := fun n => E n with hErest
+    have hErestdisjoint : PairwiseDisjoint univ Erest := by
+      intro m _ n _ hmn
+      apply Disjoint.preimage
+      simp only [mem_preimage]
+      by_cases hmltn : m < n
+      · rw [Set.disjoint_left]
+        intro x hx
+        simp only [mem_Ioc, mem_setOf_eq, not_and_or, not_lt, not_le]
+        simp only [mem_Ioc, mem_setOf_eq] at hx
+        left
+        left
+        apply le_trans hx.1.2
+        have : m.1 + (1 : ℤ) = (m+1 : Fin (⌈N⌉₊ + 1)) := by
+          rw [← Nat.cast_add_one, Nat.cast_inj]
+          apply Eq.symm (Fin.val_add_one_of_lt _)
+          exact lt_of_lt_of_le hmltn (Fin.le_last n)
+        rw [this]
+        apply hymono' _ _
+        exact Fin.add_one_le_of_lt hmltn
+      · rw [Set.disjoint_left]
+        intro x hx
+        simp only [mem_Ioc, mem_setOf_eq, not_and_or, not_lt, not_le]
+        simp only [mem_Ioc, mem_setOf_eq] at hx
+        push_neg at hmltn
+        set hnltm := lt_of_le_of_ne hmltn (Ne.symm hmn)
+        left
+        right
+        apply lt_of_le_of_lt _ hx.1.1
+        have : n.1 + (1 : ℤ) = (n+1 : Fin (⌈N⌉₊ + 1)) := by
+          rw [← Nat.cast_add_one, Nat.cast_inj]
+          apply Eq.symm (Fin.val_add_one_of_lt _)
+          exact lt_of_lt_of_le hnltm (Fin.le_last m)
+        rw [this]
+        apply hymono' _ _
+        exact Fin.add_one_le_of_lt hnltm
+    have hErestdisjoint' : Pairwise (Disjoint on Erest) := by
+      intro m n hmn
+      apply Disjoint.preimage
+      simp only [mem_preimage]
+      by_cases hmltn : m < n
+      · rw [Set.disjoint_left]
+        intro x hx
+        simp only [mem_Ioc, mem_setOf_eq, not_and_or, not_lt, not_le]
+        simp only [mem_Ioc, mem_setOf_eq] at hx
+        left
+        left
+        apply le_trans hx.1.2
+        have : m.1 + (1 : ℤ) = (m+1 : Fin (⌈N⌉₊ + 1)) := by
+          rw [← Nat.cast_add_one, Nat.cast_inj]
+          apply Eq.symm (Fin.val_add_one_of_lt _)
+          exact lt_of_lt_of_le hmltn (Fin.le_last n)
+        rw [this]
+        apply hymono' _ _
+        exact Fin.add_one_le_of_lt hmltn
+      · rw [Set.disjoint_left]
+        intro x hx
+        simp only [mem_Ioc, mem_setOf_eq, not_and_or, not_lt, not_le]
+        simp only [mem_Ioc, mem_setOf_eq] at hx
+        push_neg at hmltn
+        set hnltm := lt_of_le_of_ne hmltn (Ne.symm hmn)
+        left
+        right
+        apply lt_of_le_of_lt _ hx.1.1
+        have : n.1 + (1 : ℤ) = (n+1 : Fin (⌈N⌉₊ + 1)) := by
+          rw [← Nat.cast_add_one, Nat.cast_inj]
+          apply Eq.symm (Fin.val_add_one_of_lt _)
+          exact lt_of_lt_of_le hnltm (Fin.le_last m)
+        rw [this]
+        apply hymono' _ _
+        exact Fin.add_one_le_of_lt hnltm
+    have hErestmeasurable : ∀ (n : Fin (⌈N⌉₊ + 1)), MeasurableSet (Erest n) := by
+      intro n
+      rw [hErest]
+      simp only
+      apply MeasurableSet.inter
+      · exact (ContinuousMap.measurable f.1) measurableSet_Ioc
+      · exact measurableSet_closure
+    have hErestsubtsupport : ∀ (n : Fin (⌈N⌉₊ + 1)), Erest n ⊆ tsupport f := by
+      intro n
+      rw [hErest]
+      simp only
+      rw [hE]
+      simp only [inter_subset_right]
+    have hrangefsubioc: range f ⊆ Icc 0 (y (⌈N⌉₊ + 1)).toNNReal := by
+      intro z hz
+      simp only [mem_Icc]
+      constructor
+      · exact zero_le z
+      · rw [hy]
+        simp only [Int.cast_add, Int.cast_natCast, Int.cast_one, sub_self, mul_zero, add_zero,
+          Real.toNNReal_coe]
+        apply hb
+        rw [hLdef]
+        exact hz
+    -- have hrangefsubiunion :
+    --   range f ⊆ ⋃ n : Fin (⌈N⌉₊ + 1), Ioc (y n).toNNReal (y (n+1)).toNNReal := by
+    --   have : y = fun (n : ℤ) => b - δ * ⌈N⌉₊ - δ + n • δ := by
+    --     ext n
+    --     rw [hy]
+    --     simp only [zsmul_eq_mul]
+    --     ring
+    --   have : ⋃ n, Ioc (y n) (y (n+1)) = univ := by
+    --     rw [this]
+    --     simp only [Int.cast_add, Int.cast_one]
+    --     exact iUnion_Ioc_add_zsmul hδpos (b - δ * ⌈N⌉₊ - δ)
+    --   intro z hz
+    --   have : z ∈ ⋃ n, Ioc (y n).toNNReal (y (n+1)).toNNReal := by
+    --     rw [this]
+    --     exact trivial
+    --   obtain ⟨j, hj⟩ := mem_iUnion.mp this
+    --   have hjnonneg : 0 ≤ j := by
+    --     apply (Int.add_le_add_iff_right 1).mp
+    --     apply Int.le_of_sub_one_lt
+    --     simp only [zero_add, sub_self]
+    --     apply ymono
+    --     apply lt_of_lt_of_le hy0
+    --     simp only [mem_Ioc] at hj
+    --     apply le_trans _ hj.2
+    --     apply ha
+    --     rw [hLdef]
+    --     exact hz
+    --   have hjltceil : j < ⌈N⌉₊ + 1 := by
+    --     apply ymono
+    --     simp only [mem_Ioc] at hj
+    --     apply lt_of_lt_of_le hj.1 _
+    --     rw [hy]
+    --     simp only [Int.cast_add, Int.cast_natCast, Int.cast_one, sub_self, mul_zero, add_zero]
+    --     apply hb
+    --     rw [hLdef]
+    --     exact hz
+    --   have hnltceil : j.toNat < ⌈N⌉₊ + 1 := by
+    --     exact (Int.toNat_lt hjnonneg).mpr hjltceil
+    --   rw [mem_iUnion]
+    --   use ⟨j.toNat, hnltceil⟩
+    --   simp only
+    --   rw [Int.toNat_of_nonneg hjnonneg]
+    --   exact hj
     sorry
-  sorry
-  --   -- have habnonneg : 0 ≤ |a| + b := by
-  --   --   apply le_trans _ (add_le_add_right (neg_le_abs a) b)
-  --   --   simp only [le_neg_add_iff_add_le, add_zero]
-  --   --   exact hab
-  --   apply le_iff_forall_pos_le_add.mpr
-  --   intro ε hε
-  --   have hltε : ∃ (ε' : ℝ), 0 < ε' ∧
-  --       ε' * (2 * ((μ Λ hΛ) (tsupport f)).toReal + |a| + b + ε') < ε := by
-  --     set A := 2 * ((μ Λ hΛ) (tsupport f)).toReal + |a| + b with hA
-  --     use ε / (4 * A + 2 + 2 * ε)
-  --     have hAnonneg : 0 ≤ A := by
-  --       rw [hA, add_assoc]
-  --       apply add_nonneg _ habnonneg
-  --       simp only [gt_iff_lt, Nat.ofNat_pos, mul_nonneg_iff_of_pos_left, toReal_nonneg]
-  --     constructor
-  --     · apply div_pos hε
-  --       linarith
-  --     · rw [left_distrib]
-  --       have h1 : ε / (4 * A + 2 + 2 * ε) * A < ε / 2 := by
-  --         rw [← mul_div_right_comm, mul_div_assoc]
-  --         nth_rw 3 [← mul_one ε]
-  --         rw [mul_div_assoc]
-  --         apply mul_lt_mul_of_pos_left _ hε
-  --         apply (div_lt_div_iff _ two_pos).mpr
-  --         · linarith
-  --         · linarith
-  --       have h2 : ε / (4 * A + 2 + 2 * ε) < ε / 2 := by
-  --         apply div_lt_div_of_pos_left hε two_pos
-  --         linarith
-  --       have h3 : 0 < 4 * A + 2 + 2 * ε := by
-  --         linarith
-  --       have h4 : ε / (4 * A + 2 + 2 * ε) * (ε / (4 * A + 2 + 2 * ε)) < ε / 2 := by
-  --         rw [_root_.lt_div_iff two_pos, mul_comm, ← mul_div_assoc, ← mul_div_assoc, div_lt_iff h3,
-  --           ← mul_assoc, mul_comm, ← mul_assoc, ← mul_div_assoc, div_lt_iff h3, mul_assoc,
-  --           mul_assoc]
-  --         apply mul_lt_mul_of_pos_left _ hε
-  --         have h41 : 2 < 4 * A + 2 + 2 * ε := by
-  --           linarith
-  --         have h42 : ε < 4 * A + 2 + 2 * ε := by
-  --           linarith
-  --         exact mul_lt_mul h41 (le_of_lt h42) hε (le_of_lt h3)
-  --       nth_rw 7 [← add_halves' ε]
-  --       exact add_lt_add h1 h4
-  --   obtain ⟨ε', hε'⟩ := hltε
-  --   apply le_of_lt (lt_of_le_of_lt _ (add_lt_add_left hε'.2 _))
-  --   set δ := ε' / 2 with hδ
-  --   have hδpos : 0 < δ := by
-  --     rw [hδ]
-  --     exact div_pos hε'.1 two_pos
-  --   set N := (b - a) / δ with hN
-  --   have hNNonneg : 0 ≤ N :=
-  --     by exact div_nonneg (sub_nonneg.mpr hab) (le_of_lt hδpos)
-  --   set y : ℤ → ℝ := fun n => b + δ * (n - (⌈N⌉₊+1)) with hy
-  --   have ymono : ∀ (j k : ℤ), y j < y k → j < k := by
-  --     intro j k
-  --     rw [hy]
-  --     simp only [add_lt_add_iff_left]
-  --     intro h
-  --     apply (@Int.cast_lt ℝ).mp
-  --     apply @lt_of_tsub_lt_tsub_right ℝ j k (⌈N⌉₊ + 1)
-  --     exact lt_of_mul_lt_mul_left h (le_of_lt hδpos)
-  --   have hy1leyn : ∀ (n : Fin (⌈N⌉₊ + 1)), y 1 ≤ y (n + 1) := by
-  --     intro n
-  --     rw [hy]
-  --     simp only [Int.cast_one, sub_add_cancel_right, mul_neg, Int.cast_add, Int.cast_natCast,
-  --       add_sub_add_right_eq_sub, add_lt_add_iff_left]
-  --     rw [_root_.mul_sub]
-  --     apply le_add_neg_iff_le.mp
-  --     ring_nf
-  --     simp only [one_div, gt_iff_lt, inv_pos, Nat.ofNat_pos, mul_nonneg_iff_of_pos_right]
-  --     exact mul_nonneg (le_of_lt hε'.1) (Nat.cast_nonneg _)
-  --   have hymono' : ∀ (m n : Fin (⌈N⌉₊ + 1)), m ≤ n → y m ≤ y n := by
-  --     intro m n hmn
-  --     rw [hy]
-  --     simp only [Int.cast_natCast, add_le_add_iff_left]
-  --     rw [_root_.mul_sub, _root_.mul_sub]
-  --     simp only [tsub_le_iff_right, sub_add_cancel]
-  --     apply mul_le_mul_of_nonneg_left _ (le_of_lt hδpos)
-  --     rw [Nat.cast_le]
-  --     simp only [Fin.val_fin_le]
-  --     exact hmn
-  --   have hy0 : y 0 < a := by
-  --     rw [hy, hN]
-  --     simp only [Int.cast_zero, Int.ceil_add_one, Int.cast_add, Int.cast_one, zero_sub, neg_add_rev]
-  --     apply lt_tsub_iff_left.mp
-  --     apply (lt_div_iff' hδpos).mp
-  --     simp only [add_neg_lt_iff_lt_add]
-  --     rw [neg_lt_iff_pos_add, add_assoc, ← neg_lt_iff_pos_add']
-  --     apply lt_add_of_lt_add_right _ (Nat.le_ceil _)
-  --     rw [neg_lt_iff_pos_add]
-  --     apply pos_of_mul_pos_left _ (le_of_lt hδpos)
-  --     rw [add_mul, add_mul, div_mul, div_mul, div_self (Ne.symm (ne_of_lt hδpos))]
-  --     simp only [div_one, one_mul]
-  --     linarith
-
-  --   set E : ℤ → Set X := fun n => (f ⁻¹' Ioc (y n) (y (n+1))) ∩ (tsupport f) with hE
-  --   set Erest : Fin (⌈N⌉₊ + 1) → Set X := fun n => E n with hErest
-  --   have hErestdisjoint : PairwiseDisjoint univ Erest := by
-  --     intro m _ n _ hmn
-  --     apply Disjoint.preimage
-  --     simp only [mem_preimage]
-  --     by_cases hmltn : m < n
-  --     · rw [Set.disjoint_left]
-  --       intro x hx
-  --       simp only [mem_Ioc, mem_setOf_eq, not_and_or, not_lt, not_le]
-  --       simp only [mem_Ioc, mem_setOf_eq] at hx
-  --       left
-  --       left
-  --       apply le_trans hx.1.2
-  --       have : m.1 + (1 : ℤ) = (m+1 : Fin (⌈N⌉₊ + 1)) := by
-  --         rw [← Nat.cast_add_one, Nat.cast_inj]
-  --         apply Eq.symm (Fin.val_add_one_of_lt _)
-  --         exact lt_of_lt_of_le hmltn (Fin.le_last n)
-  --       rw [this]
-  --       apply hymono' _ _
-  --       exact Fin.add_one_le_of_lt hmltn
-  --     · rw [Set.disjoint_left]
-  --       intro x hx
-  --       simp only [mem_Ioc, mem_setOf_eq, not_and_or, not_lt, not_le]
-  --       simp only [mem_Ioc, mem_setOf_eq] at hx
-  --       push_neg at hmltn
-  --       set hnltm := lt_of_le_of_ne hmltn (Ne.symm hmn)
-  --       left
-  --       right
-  --       apply lt_of_le_of_lt _ hx.1.1
-  --       have : n.1 + (1 : ℤ) = (n+1 : Fin (⌈N⌉₊ + 1)) := by
-  --         rw [← Nat.cast_add_one, Nat.cast_inj]
-  --         apply Eq.symm (Fin.val_add_one_of_lt _)
-  --         exact lt_of_lt_of_le hnltm (Fin.le_last m)
-  --       rw [this]
-  --       apply hymono' _ _
-  --       exact Fin.add_one_le_of_lt hnltm
-  --   have hErestdisjoint' : Pairwise (Disjoint on Erest) := by
-  --     intro m n hmn
-  --     apply Disjoint.preimage
-  --     simp only [mem_preimage]
-  --     by_cases hmltn : m < n
-  --     · rw [Set.disjoint_left]
-  --       intro x hx
-  --       simp only [mem_Ioc, mem_setOf_eq, not_and_or, not_lt, not_le]
-  --       simp only [mem_Ioc, mem_setOf_eq] at hx
-  --       left
-  --       left
-  --       apply le_trans hx.1.2
-  --       have : m.1 + (1 : ℤ) = (m+1 : Fin (⌈N⌉₊ + 1)) := by
-  --         rw [← Nat.cast_add_one, Nat.cast_inj]
-  --         apply Eq.symm (Fin.val_add_one_of_lt _)
-  --         exact lt_of_lt_of_le hmltn (Fin.le_last n)
-  --       rw [this]
-  --       apply hymono' _ _
-  --       exact Fin.add_one_le_of_lt hmltn
-  --     · rw [Set.disjoint_left]
-  --       intro x hx
-  --       simp only [mem_Ioc, mem_setOf_eq, not_and_or, not_lt, not_le]
-  --       simp only [mem_Ioc, mem_setOf_eq] at hx
-  --       push_neg at hmltn
-  --       set hnltm := lt_of_le_of_ne hmltn (Ne.symm hmn)
-  --       left
-  --       right
-  --       apply lt_of_le_of_lt _ hx.1.1
-  --       have : n.1 + (1 : ℤ) = (n+1 : Fin (⌈N⌉₊ + 1)) := by
-  --         rw [← Nat.cast_add_one, Nat.cast_inj]
-  --         apply Eq.symm (Fin.val_add_one_of_lt _)
-  --         exact lt_of_lt_of_le hnltm (Fin.le_last m)
-  --       rw [this]
-  --       apply hymono' _ _
-  --       exact Fin.add_one_le_of_lt hnltm
-  --   have hErestmeasurable : ∀ (n : Fin (⌈N⌉₊ + 1)), MeasurableSet (Erest n) := by
-  --     intro n
-  --     rw [hErest]
-  --     simp only
-  --     apply MeasurableSet.inter
-  --     · exact (ContinuousMap.measurable f.1) measurableSet_Ioc
-  --     · exact measurableSet_closure
-  --   have hErestsubtsupport : ∀ (n : Fin (⌈N⌉₊ + 1)), Erest n ⊆ tsupport f := by
-  --     intro n
-  --     rw [hErest]
-  --     simp only
-  --     rw [hE]
-  --     simp only [inter_subset_right]
-  --   have hrangefsubioc: range f ⊆ Ioc (y 0) (y (⌈N⌉₊ + 1)) := by
-  --     intro z hz
-  --     simp only [mem_Ioc]
-  --     constructor
-  --     · apply lt_of_lt_of_le hy0
-  --       apply ha
-  --       rw [hLdef]
-  --       exact hz
-  --     · rw [hy]
-  --       simp only [Int.cast_add, Int.cast_natCast, Int.cast_one, sub_self, mul_zero, add_zero]
-  --       apply hb
-  --       rw [hLdef]
-  --       exact hz
-  --   have hrangefsubiunion: range f ⊆ ⋃ n : Fin (⌈N⌉₊ + 1), Ioc (y n) (y (n+1)) := by
-  --     have : y = fun (n : ℤ) => b - δ * ⌈N⌉₊ - δ + n • δ := by
-  --       ext n
-  --       rw [hy]
-  --       simp only [zsmul_eq_mul]
-  --       ring
-  --     have : ⋃ n, Ioc (y n) (y (n+1)) = univ := by
-  --       rw [this]
-  --       simp only [Int.cast_add, Int.cast_one]
-  --       exact iUnion_Ioc_add_zsmul hδpos (b - δ * ⌈N⌉₊ - δ)
-  --     intro z hz
-  --     have : z ∈ ⋃ n, Ioc (y n) (y (n+1)) := by
-  --       rw [this]
-  --       exact trivial
-  --     obtain ⟨j, hj⟩ := mem_iUnion.mp this
-  --     have hjnonneg : 0 ≤ j := by
-  --       apply (Int.add_le_add_iff_right 1).mp
-  --       apply Int.le_of_sub_one_lt
-  --       simp only [zero_add, sub_self]
-  --       apply ymono
-  --       apply lt_of_lt_of_le hy0
-  --       simp only [mem_Ioc] at hj
-  --       apply le_trans _ hj.2
-  --       apply ha
-  --       rw [hLdef]
-  --       exact hz
-  --     have hjltceil : j < ⌈N⌉₊ + 1 := by
-  --       apply ymono
-  --       simp only [mem_Ioc] at hj
-  --       apply lt_of_lt_of_le hj.1 _
-  --       rw [hy]
-  --       simp only [Int.cast_add, Int.cast_natCast, Int.cast_one, sub_self, mul_zero, add_zero]
-  --       apply hb
-  --       rw [hLdef]
-  --       exact hz
-  --     have hnltceil : j.toNat < ⌈N⌉₊ + 1 := by
-  --       exact (Int.toNat_lt hjnonneg).mpr hjltceil
-  --     rw [mem_iUnion]
-  --     use ⟨j.toNat, hnltceil⟩
-  --     simp only
-  --     rw [Int.toNat_of_nonneg hjnonneg]
-  --     exact hj
   --   have htsupportsubErest : tsupport f ⊆ ⋃ j, Erest j := by
   --     intro x hx
   --     rw [hErest, hE]
@@ -1008,6 +1012,12 @@ theorem RMK [Nonempty X] : ∀ (f : C_c(X, ℝ≥0)), ∫⁻ (x : X), f x ∂(μ
   --   · apply Finset.sum_le_sum
   --     exact fun n => fun _ => ynsubεmulμEnleintEnf n
   --   · linarith
+  rw [lintegral_coe_eq_integral, ← ENNReal.ofNNReal_toNNReal]
+  · simp only [ENNReal.coe_inj]
+    sorry
+  rw [μ]
+  exact Continuous.integrable_of_hasCompactSupport (by continuity)
+    (HasCompactSupport.comp_left f.hasCompactSupport NNReal.coe_zero)
   -- apply le_antisymm
   -- · calc ∫ (x : X), f x ∂(μ Λ hΛ) = ∫ (x : X), -(-f) x ∂(μ Λ hΛ) := by simp only
   --     [CompactlySupportedContinuousMap.coe_neg, Pi.neg_apply, neg_neg]

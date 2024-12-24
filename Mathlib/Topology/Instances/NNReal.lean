@@ -74,7 +74,7 @@ instance : CompleteSpace ℝ≥0 :=
 instance : ContinuousStar ℝ≥0 where
   continuous_star := continuous_id
 
-instance instIsOrderBornology : IsOrderBornology ℝ≥0 where
+instance : IsOrderBornology ℝ≥0 where
   isBounded_iff_bddBelow_bddAbove s := by
     refine ⟨fun bdd ↦ ?_, fun h ↦ isBounded_of_bddAbove_of_bddBelow h.2 h.1⟩
     obtain ⟨r, hr⟩ : ∃ r : ℝ≥0, s ⊆ Icc 0 r := by

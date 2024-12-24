@@ -319,14 +319,7 @@ theorem HasFDerivWithinAt.of_nhdsWithin_eq_bot [T1Space E] (h : 𝓝[s\{x}] x = 
     HasFDerivWithinAt f f' s x := by
   rw [← hasFDerivWithinAt_diff_singleton x, HasFDerivWithinAt, h,
     hasFDerivAtFilter_iff_isLittleOTVS]
-  -- TODO
-  -- apply isLittleOTVS_bot
-  simp [IsLittleOTVS]
-  intros U hU
-  refine ⟨{0}, ?_⟩
-  rw [@_root_.mem_nhds_iff]
-  use {0}
-  simp [isOpen_singleton_iff]
+  exact .bot
 
 /-- If `x` is not in the closure of `s`, then `f` has any derivative at `x` within `s`,
 as this statement is empty. -/

@@ -134,6 +134,7 @@ lemma IsLittleOTVS.insert [TopologicalSpace α] {f : α → E} {g : α → F} {x
     IsLittleOTVS 𝕜 f g (𝓝[insert x s] x) :=
   (isLittleOTVS_insert hf).2 h
 
+@[simp]
 lemma IsLittleOTVS.bot {f : α → E} {g : α → F} : IsLittleOTVS 𝕜 f g ⊥ :=
   fun u hU => ⟨univ, by simp⟩
 

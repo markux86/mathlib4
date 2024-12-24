@@ -49,10 +49,10 @@ lemma card_edgeFinset_induce_of_free_le_extremalNumber
 lemma extremalNumber_div_choose_two_succ_le {n : ℕ} (hn : 2 ≤ n) :
     (extremalNumber (Fin (n+1)) H / (n+1).choose 2 : ℝ)
       ≤ (extremalNumber (Fin n) H / n.choose 2 : ℝ) := by
-  rw [div_le_iff₀ (cast_choose_two_pos (by linarith)),
+  rw [div_le_iff₀ <| Nat.cast_pos.mpr <| Nat.choose_pos (by linarith),
     extremalNumber_le_iff_of_nonneg (Fin (n+1)) H (by positivity)]
   intro G _ h
-  rw [mul_comm, ←mul_div_assoc, le_div_iff₀' (cast_choose_two_pos hn)]
+  rw [mul_comm, ←mul_div_assoc, le_div_iff₀' <| Nat.cast_pos.mpr <| Nat.choose_pos hn]
   -- double-counting vertices not in edges
   let s := (Finset.univ ×ˢ G.edgeFinset).filter fun (v, e) ↦ v ∉ e
   -- counting over vertices
@@ -78,16 +78,12 @@ lemma extremalNumber_div_choose_two_succ_le {n : ℕ} (hn : 2 ≤ n) :
     show n + 1 - 1 = n from Nat.pred_succ n, mul_le_mul_right (by positivity), ←Nat.cast_mul,
     ←Nat.cast_mul, Nat.cast_le]
   rwa [h_edges] at h_vertices
-where
-  cast_choose_two_pos {n : ℕ} (hn : n ≥ 2) : 0 < (n.choose 2 : ℝ) := by
-    rw [Nat.cast_pos]
-    exact Nat.choose_pos hn
 
 /-- The limit `extremalNumber (Fin n) H / n.choose 2` as `n` approaches `∞` exists. -/
 lemma exists_tendsto_extremalNumber_div_choose_two (H : SimpleGraph V) :
     ∃ x, Filter.Tendsto (fun (n : ℕ) ↦ (extremalNumber (Fin n) H / n.choose 2 : ℝ))
       Filter.atTop (𝓝 x) := by
-  let f := (fun (n : ℕ) ↦ (extremalNumber (Fin n) H / n.choose 2 : ℝ))
+  let f := fun (n : ℕ) ↦ (extremalNumber (Fin n) H / n.choose 2 : ℝ)
   suffices h : ∃ x, Filter.Tendsto (fun (n : ℕ) ↦ f (n + 2)) Filter.atTop (𝓝 x) by
     simpa [Filter.tendsto_add_atTop_iff_nat 2] using h
   -- limit of antitone sequence bounded from below is infimum
@@ -124,19 +120,17 @@ approaches `∞`. -/
 theorem isEquivalent_extremalNumber {H : SimpleGraph V} (h : turanDensity H ≠ 0) :
     (fun (n : ℕ) ↦ (extremalNumber (Fin n) H : ℝ))
       ~[Filter.atTop] (fun (n : ℕ) ↦ (turanDensity H * n.choose 2 : ℝ)) := by
-  rw [isEquivalent_iff_tendsto_one eventually_ne_zero]
+  have hz : ∀ᶠ (x : ℕ) in Filter.atTop, turanDensity H * x.choose 2 ≠ 0 := by
+    rw [Filter.eventually_atTop]
+    use 2
+    intro n hn
+    field_simp [h, Nat.choose_eq_zero_iff, hn]
+  rw [isEquivalent_iff_tendsto_one hz]
   have hπ := tendsto_turanDensity H
   apply Filter.Tendsto.const_mul (1 / (turanDensity H) : ℝ) at hπ
   simp_rw [one_div_mul_cancel h] at hπ
   convert hπ
   field_simp [Pi.div_apply]
-where
-  eventually_ne_zero :
-      ∀ᶠ (x : ℕ) in Filter.atTop, turanDensity H * x.choose 2 ≠ 0 := by
-    rw [Filter.eventually_atTop]
-    use 2
-    intro n hn
-    field_simp [h, Nat.choose_eq_zero_iff, hn]
 
 end TuranDensity
 

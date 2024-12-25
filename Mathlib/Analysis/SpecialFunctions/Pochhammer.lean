@@ -36,11 +36,11 @@ lemma descPochhammer_eval_eq_prod_range (n : ℕ) (k : 𝕜) :
   | succ n ih =>
     simp [descPochhammer_succ_right, ih, ←Finset.prod_range_succ]
 
-/-- `descPochhammer 𝕜 k` is differentiable. -/
+/-- `descPochhammer 𝕜 n` is differentiable. -/
 theorem Differentiable.descPochhammer_eval : Differentiable 𝕜 (descPochhammer 𝕜 n).eval := by
   simp [descPochhammer_eval_eq_prod_range, Differentiable.finset_prod]
 
-/-- `descPochhammer 𝕜 k` is continuous. -/
+/-- `descPochhammer 𝕜 n` is continuous. -/
 theorem Continuous.descPochhammer_eval : Continuous (descPochhammer 𝕜 n).eval := by
   exact Differentiable.descPochhammer_eval.continuous
 
@@ -153,7 +153,7 @@ theorem descPochhammer_eval_le_sum_descFactorial
 
 /-- Special case of **Jensen's inequality** for `Nat.choose`. -/
 theorem descPochhammer_eval_div_factorial_le_sum_choose
-    (hn : 1 ≤n) {ι : Type*} {t : Finset ι} (p : ι → ℕ) (w : ι → ℝ)
+    (hn : 1 ≤ n) {ι : Type*} {t : Finset ι} (p : ι → ℕ) (w : ι → ℝ)
     (h₀ : ∀ i ∈ t, 0 ≤ w i) (h₁ : ∑ i ∈ t, w i = 1) (h_avg : n-1 ≤ ∑ i ∈ t, w i * p i) :
     (descPochhammer ℝ n).eval (∑ i ∈ t, w i * p i) / n.factorial
       ≤ ∑ i ∈ t, w i * (p i).choose n := by

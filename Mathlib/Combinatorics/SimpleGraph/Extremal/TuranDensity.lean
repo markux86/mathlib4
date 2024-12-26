@@ -49,10 +49,10 @@ lemma card_edgeFinset_induce_of_free_le_extremalNumber
 lemma extremalNumber_div_choose_two_succ_le {n : ℕ} (hn : 2 ≤ n) :
     (extremalNumber (Fin (n+1)) H / (n+1).choose 2 : ℝ)
       ≤ (extremalNumber (Fin n) H / n.choose 2 : ℝ) := by
-  rw [div_le_iff₀ <| Nat.cast_pos.mpr <| Nat.choose_pos (by linarith),
+  rw [div_le_iff₀ (mod_cast Nat.choose_pos (by linarith)),
     extremalNumber_le_iff_of_nonneg (Fin (n+1)) H (by positivity)]
   intro G _ h
-  rw [mul_comm, ←mul_div_assoc, le_div_iff₀' <| Nat.cast_pos.mpr <| Nat.choose_pos hn]
+  rw [mul_comm, ←mul_div_assoc, le_div_iff₀' (mod_cast Nat.choose_pos hn)]
   -- double-counting vertices not in edges
   let s := (Finset.univ ×ˢ G.edgeFinset).filter fun (v, e) ↦ v ∉ e
   -- counting over vertices

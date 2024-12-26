@@ -161,6 +161,6 @@ theorem descPochhammer_eval_div_factorial_le_sum_choose
     descPochhammer_eval_eq_descFactorial]
   apply div_le_div_of_nonneg_right
   · exact descPochhammer_eval_le_sum_descFactorial hn p w h₀ h₁ h_avg
-  · exact Nat.cast_nonneg (n.factorial)
+  · exact Nat.cast_nonneg n.factorial
 
 end DescPochhammer

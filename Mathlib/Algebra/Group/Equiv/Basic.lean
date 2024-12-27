@@ -147,22 +147,16 @@ variable [EquivLike F α β]
 
 /-- Turn an element of a type `F` satisfying `MulEquivClass F α β` into an actual
 `MulEquiv`. This is declared as the default coercion from `F` to `α ≃* β`. -/
-@[to_additive (attr := coe)
+@[to_additive (attr := simps!)
 "Turn an element of a type `F` satisfying `AddEquivClass F α β` into an actual
 `AddEquiv`. This is declared as the default coercion from `F` to `α ≃+ β`."]
-def MulEquivClass.toMulEquiv [Mul α] [Mul β] [MulEquivClass F α β] (f : F) : α ≃* β :=
-  { (f : α ≃ β), (f : α →ₙ* β) with }
-
-/-- Any type satisfying `MulEquivClass` can be cast into `MulEquiv` via
-`MulEquivClass.toMulEquiv`. -/
-@[to_additive "Any type satisfying `AddEquivClass` can be cast into `AddEquiv` via
-`AddEquivClass.toAddEquiv`. "]
-instance [Mul α] [Mul β] [MulEquivClass F α β] : CoeTC F (α ≃* β) :=
-  ⟨MulEquivClass.toMulEquiv⟩
+def MulEquiv.ofClass [Mul α] [Mul β] [MulEquivClass F α β] (f : F) : α ≃* β where
+  __ : α ≃ β := .ofClass f
+  __ : α →ₙ* β := .ofClass f
 
 @[to_additive]
-theorem MulEquivClass.toMulEquiv_injective [Mul α] [Mul β] [MulEquivClass F α β] :
-    Function.Injective ((↑) : F → α ≃* β) :=
+theorem MulEquiv.ofClass_injective [Mul α] [Mul β] [MulEquivClass F α β] :
+    Function.Injective (.ofClass : F → α ≃* β) :=
   fun _ _ e ↦ DFunLike.ext _ _ fun a ↦ congr_arg (fun e : α ≃* β ↦ e.toFun a) e
 
 namespace MulEquiv
@@ -184,12 +178,17 @@ instance : EquivLike (M ≃* N) M N where
     apply Equiv.coe_fn_injective h₁
 
 @[to_additive] -- shortcut instance that doesn't generate any subgoals
-instance : CoeFun (M ≃* N) fun _ ↦ M → N where
-  coe f := f
+instance : FunLike (M ≃* N) M N := inferInstance
 
 @[to_additive]
 instance : MulEquivClass (M ≃* N) M N where
   map_mul f := f.map_mul'
+
+attribute [coe] toEquiv
+attribute [coe] toMulHom
+
+@[to_additive] instance : Coe (M ≃* N) (M ≃ N) where coe := toEquiv
+@[to_additive] instance : Coe (M ≃* N) (M →ₙ* N) where coe := toMulHom
 
 /-- Two multiplicative isomorphisms agree if they are defined by the
 same underlying function. -/
@@ -214,23 +213,17 @@ theorem mk_coe (e : M ≃* N) (e' h₁ h₂ h₃) : (⟨⟨e, e', h₁, h₂⟩,
   ext fun _ => rfl
 
 @[to_additive (attr := simp)]
-theorem toEquiv_eq_coe (f : M ≃* N) : f.toEquiv = f :=
-  rfl
-
--- Porting note: added, to simplify `f.toMulHom` back to the coercion via `MulHomClass.toMulHom`.
-@[to_additive (attr := simp)]
-theorem toMulHom_eq_coe (f : M ≃* N) : f.toMulHom = ↑f :=
-  rfl
+lemma toFun_eq_coe (f : M ≃* N) : f.toFun = f := rfl
 
 -- Porting note: `to_fun_eq_coe` no longer needed in Lean4
 
 @[to_additive (attr := simp)]
-theorem coe_toEquiv (f : M ≃* N) : ⇑(f : M ≃ N) = f := rfl
+theorem coe_toEquiv (f : M ≃* N) : ⇑f.toEquiv = f := rfl
 
 -- Porting note (https://github.com/leanprover-community/mathlib4/issues/11215): TODO: `MulHom.coe_mk` simplifies `↑f.toMulHom` to `f.toMulHom.toFun`,
 -- not `f.toEquiv.toFun`; use higher priority as a workaround
 @[to_additive (attr := simp 1100)]
-theorem coe_toMulHom {f : M ≃* N} : (f.toMulHom : M → N) = f := rfl
+theorem coe_toMulHom {f : M ≃* N} : ⇑f.toMulHom = f := rfl
 
 /-- Makes a multiplicative isomorphism from a bijection which preserves multiplication. -/
 @[to_additive "Makes an additive isomorphism from a bijection which preserves addition."]
@@ -387,23 +380,20 @@ theorem symm_comp_eq {α : Type*} (e : M ≃* N) (f : α → M) (g : α → N) :
   e.toEquiv.symm_comp_eq f g
 
 @[to_additive (attr := simp)]
-theorem _root_.MulEquivClass.apply_coe_symm_apply {α β} [Mul α] [Mul β] {F} [EquivLike F α β]
+theorem apply_ofClass_symm_apply {α β} [Mul α] [Mul β] {F} [EquivLike F α β]
     [MulEquivClass F α β] (e : F) (x : β) :
-    e ((e : α ≃* β).symm x) = x :=
-  (e : α ≃* β).right_inv x
+    e ((.ofClass e : α ≃* β).symm x) = x :=
+  (.ofClass e : α ≃* β).right_inv x
 
 @[to_additive (attr := simp)]
-theorem _root_.MulEquivClass.coe_symm_apply_apply {α β} [Mul α] [Mul β] {F} [EquivLike F α β]
+theorem ofClass_symm_apply_apply {α β} [Mul α] [Mul β] {F} [EquivLike F α β]
     [MulEquivClass F α β] (e : F) (x : α) :
-    (e : α ≃* β).symm (e x) = x :=
-  (e : α ≃* β).left_inv x
+    (.ofClass e : α ≃* β).symm (e x) = x :=
+  (.ofClass e : α ≃* β).left_inv x
 
 end symm
 
 section simps
-
--- we don't hyperlink the note in the additive version, since that breaks syntax highlighting
--- in the whole file.
 
 /-- See Note [custom simps projection] -/
 @[to_additive "See Note [custom simps projection]"] -- this comment fixes the syntax highlighting "
@@ -476,9 +466,10 @@ variable [MulOneClass M] [MulOneClass N] [MulOneClass P]
 (and is hence an additive monoid isomorphism)."]
 protected lemma map_one (h : M ≃* N) : h 1 = 1 := map_one h
 
+-- TODO: Why does this generate `h.toMonoidHom a = h.toFun a` rather than `h.toMonoidHom a = ⇑h a`?
 /-- Extract the forward direction of a multiplicative equivalence
 as a multiplication-preserving function. -/
-@[to_additive "Extract the forward direction of an additive equivalence
+@[to_additive (attr := simps) "Extract the forward direction of an additive equivalence
 as an addition-preserving function."]
 def toMonoidHom (h : M ≃* N) : M →* N :=
   { h with map_one' := h.map_one }
@@ -492,9 +483,7 @@ lemma coe_toMonoidHom (e : M ≃* N) : ⇑e.toMonoidHom = e := rfl
 lemma toMonoidHom_injective : Injective (toMonoidHom : M ≃* N → M →* N) :=
   .of_comp (f := DFunLike.coe) DFunLike.coe_injective
 
--- Porting note (https://github.com/leanprover-community/mathlib4/issues/10618): `simp` can prove this but it is a valid `dsimp` lemma.
--- However, we would need to redesign the `dsimp` set to make this `@[simp]`.
-@[to_additive] lemma toMonoidHom_refl : (refl M : M →* M) = MonoidHom.id M := rfl
+@[to_additive] lemma toMonoidHom_refl : (refl M : M →* M) = .id M := rfl
 
 -- Porting note (https://github.com/leanprover-community/mathlib4/issues/10618): `simp` can prove this but it is a valid `dsimp` lemma.
 -- However, we would need to redesign the `dsimp` set to make this `@[simp]`.

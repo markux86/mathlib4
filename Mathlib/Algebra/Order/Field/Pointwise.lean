@@ -3,8 +3,11 @@ Copyright (c) 2021 Alex J. Best. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Alex J. Best, Yaël Dillies
 -/
-import Mathlib.Data.Set.Pointwise.SMul
+import Mathlib.Algebra.Group.Pointwise.Set.Basic
+import Mathlib.Algebra.Module.Defs
 import Mathlib.Algebra.Order.Field.Defs
+import Mathlib.Algebra.Order.GroupWithZero.Unbundled.Lemmas
+import Mathlib.Order.Interval.Set.OrderIso
 
 /-!
 # Pointwise operations on ordered algebraic objects

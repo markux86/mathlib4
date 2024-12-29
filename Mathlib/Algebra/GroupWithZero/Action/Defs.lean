@@ -4,11 +4,9 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Chris Hughes, Yury Kudryashov
 -/
 import Mathlib.Algebra.Group.Action.Opposite
-import Mathlib.Algebra.Group.Action.Units
-import Mathlib.Algebra.Group.Int
+import Mathlib.Algebra.Group.Nat.Basic
 import Mathlib.Algebra.GroupWithZero.Hom
 import Mathlib.Algebra.GroupWithZero.Opposite
-import Mathlib.Algebra.GroupWithZero.Units.Basic
 
 /-!
 # Definitions of group actions

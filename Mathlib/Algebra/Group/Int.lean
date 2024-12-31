@@ -55,7 +55,7 @@ instance instAddCommGroup : AddCommGroup ℤ where
 /-!
 ### Extra instances to short-circuit type class resolution
 
-These also prevent non-computable instances like `Int.normedCommRing` being used to construct
+These also prevent non-computable instances like `Int.instNormedCommRing` being used to construct
 these instances non-computably.
 -/
 
@@ -74,9 +74,9 @@ section Multiplicative
 
 open Multiplicative
 
-lemma toAdd_pow (a : Multiplicative ℤ) (b : ℕ) : toAdd (a ^ b) = toAdd a * b := mul_comm _ _
+lemma toAdd_pow (a : Multiplicative ℤ) (b : ℕ) : (a ^ b).toAdd = a.toAdd * b := mul_comm _ _
 
-lemma toAdd_zpow (a : Multiplicative ℤ) (b : ℤ) : toAdd (a ^ b) = toAdd a * b := mul_comm _ _
+lemma toAdd_zpow (a : Multiplicative ℤ) (b : ℤ) : (a ^ b).toAdd = a.toAdd * b := mul_comm _ _
 
 @[simp] lemma ofAdd_mul (a b : ℤ) : ofAdd (a * b) = ofAdd a ^ b := (toAdd_zpow ..).symm
 

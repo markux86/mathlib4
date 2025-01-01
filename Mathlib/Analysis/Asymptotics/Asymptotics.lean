@@ -320,8 +320,14 @@ theorem IsBigO.congr (h : f₁ =O[l] g₁) (hf : ∀ x, f₁ x = f₂ x) (hg : �
 theorem IsBigO.congr_left (h : f₁ =O[l] g) (hf : ∀ x, f₁ x = f₂ x) : f₂ =O[l] g :=
   h.congr hf fun _ => rfl
 
+theorem IsBigO.congr_left' (h : f₁ =O[l] g) (hf : f₁ =ᶠ[l] f₂) : f₂ =O[l] g :=
+  h.congr' hf (Eq.eventuallyEq rfl)
+
 theorem IsBigO.congr_right (h : f =O[l] g₁) (hg : ∀ x, g₁ x = g₂ x) : f =O[l] g₂ :=
   h.congr (fun _ => rfl) hg
+
+theorem IsBigO.congr_right' (h : f =O[l] g₁) (hg : g₁ =ᶠ[l] g₂) : f =O[l] g₂ :=
+  h.congr' (Eq.eventuallyEq rfl) hg
 
 theorem isLittleO_congr (hf : f₁ =ᶠ[l] f₂) (hg : g₁ =ᶠ[l] g₂) : f₁ =o[l] g₁ ↔ f₂ =o[l] g₂ := by
   simp only [IsLittleO_def]
@@ -337,8 +343,14 @@ theorem IsLittleO.congr (h : f₁ =o[l] g₁) (hf : ∀ x, f₁ x = f₂ x) (hg 
 theorem IsLittleO.congr_left (h : f₁ =o[l] g) (hf : ∀ x, f₁ x = f₂ x) : f₂ =o[l] g :=
   h.congr hf fun _ => rfl
 
+theorem IsLittleO.congr_left' (h : f₁ =o[l] g) (hf : f₁ =ᶠ[l] f₂) : f₂ =o[l] g :=
+  h.congr' hf (Eq.eventuallyEq rfl)
+
 theorem IsLittleO.congr_right (h : f =o[l] g₁) (hg : ∀ x, g₁ x = g₂ x) : f =o[l] g₂ :=
   h.congr (fun _ => rfl) hg
+
+theorem IsLitteO.congr_right' (h : f =o[l] g₁) (hg : g₁ =ᶠ[l] g₂) : f =o[l] g₂ :=
+  h.congr' (Eq.eventuallyEq rfl) hg
 
 @[trans]
 theorem _root_.Filter.EventuallyEq.trans_isBigO {f₁ f₂ : α → E} {g : α → F} (hf : f₁ =ᶠ[l] f₂)

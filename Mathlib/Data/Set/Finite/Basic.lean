@@ -683,7 +683,7 @@ to prove for the empty set and to prove that `C t → C ({a} ∪ t)` for all `t 
 This is analogous to `Finset.induction_on'`. See also `Set.Finite.induction_on` for the version
 requiring `C t → C ({a} ∪ t)` for all `t`. -/
 @[elab_as_elim]
-theorem Finite.induction_on_subset {C : ∀ s : Set α, s.Finite → Prop} {s : Set α} (hs : s.Finite)
+theorem Finite.induction_on_subset {C : ∀ s : Set α, s.Finite → Prop} (s : Set α) (hs : s.Finite)
     (empty : C ∅ finite_empty)
     (insert : ∀ {a t}, a ∈ s → ∀ hts : t ⊆ s, a ∉ t → C t (hs.subset hts) →
       C (insert a t) ((hs.subset hts).insert a)) : C s hs := by

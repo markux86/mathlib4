@@ -76,9 +76,10 @@ nonrec theorem abs_of_nonneg {r : ℝ} (h : 0 ≤ r) : Complex.abs r = r :=
 @[simp]
 theorem abs_natCast (n : ℕ) : Complex.abs n = n := Complex.abs_of_nonneg (Nat.cast_nonneg n)
 
+-- See note [no_index around OfNat.ofNat]
 @[simp]
 theorem abs_ofNat (n : ℕ) [n.AtLeastTwo] :
-    Complex.abs ofNat(n) = ofNat(n) :=
+    Complex.abs (no_index (OfNat.ofNat n : ℂ)) = OfNat.ofNat n :=
   abs_natCast n
 
 theorem mul_self_abs (z : ℂ) : Complex.abs z * Complex.abs z = normSq z :=
@@ -294,10 +295,16 @@ theorem lim_abs (f : CauSeq ℂ Complex.abs) : lim (cauSeqAbs f) = Complex.abs (
     let ⟨i, hi⟩ := equiv_lim f ε ε0
     ⟨i, fun j hj => lt_of_le_of_lt (Complex.abs.abs_abv_sub_le_abv_sub _ _) (hi j hj)⟩
 
+lemma ne_zero_of_re_pos {s : ℂ} (hs : 0 < s.re) : s ≠ 0 :=
+  fun h ↦ (zero_re ▸ h ▸ hs).false
+
 lemma ne_zero_of_one_lt_re {s : ℂ} (hs : 1 < s.re) : s ≠ 0 :=
-  fun h ↦ ((zero_re ▸ h ▸ hs).trans zero_lt_one).false
+  ne_zero_of_re_pos <| zero_lt_one.trans hs
+
+lemma re_neg_ne_zero_of_re_pos {s : ℂ} (hs : 0 < s.re) : (-s).re ≠ 0 :=
+  ne_iff_lt_or_gt.mpr <| Or.inl <| neg_re s ▸ (neg_lt_zero.mpr hs)
 
 lemma re_neg_ne_zero_of_one_lt_re {s : ℂ} (hs : 1 < s.re) : (-s).re ≠ 0 :=
-  ne_iff_lt_or_gt.mpr <| Or.inl <| neg_re s ▸ by linarith
+  re_neg_ne_zero_of_re_pos <| zero_lt_one.trans hs
 
 end Complex

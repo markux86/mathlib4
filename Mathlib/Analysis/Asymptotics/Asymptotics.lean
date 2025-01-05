@@ -319,8 +319,14 @@ theorem IsBigO.congr (h : f₁ =O[l] g₁) (hf : ∀ x, f₁ x = f₂ x) (hg : �
 theorem IsBigO.congr_left (h : f₁ =O[l] g) (hf : ∀ x, f₁ x = f₂ x) : f₂ =O[l] g :=
   h.congr hf fun _ => rfl
 
+theorem IsBigO.congr_ae_left (h : f₁ =O[l] g) (hf : f₁ =ᶠ[l] f₂) : f₂ =O[l] g :=
+  h.congr' hf (Eq.eventuallyEq rfl)
+
 theorem IsBigO.congr_right (h : f =O[l] g₁) (hg : ∀ x, g₁ x = g₂ x) : f =O[l] g₂ :=
   h.congr (fun _ => rfl) hg
+
+theorem IsBigO.congr_ae_right (h : f =O[l] g₁) (hg : g₁ =ᶠ[l] g₂) : f =O[l] g₂ :=
+  h.congr' (Eq.eventuallyEq rfl) hg
 
 theorem isLittleO_congr (hf : f₁ =ᶠ[l] f₂) (hg : g₁ =ᶠ[l] g₂) : f₁ =o[l] g₁ ↔ f₂ =o[l] g₂ := by
   simp only [IsLittleO_def]
@@ -336,8 +342,14 @@ theorem IsLittleO.congr (h : f₁ =o[l] g₁) (hf : ∀ x, f₁ x = f₂ x) (hg 
 theorem IsLittleO.congr_left (h : f₁ =o[l] g) (hf : ∀ x, f₁ x = f₂ x) : f₂ =o[l] g :=
   h.congr hf fun _ => rfl
 
+theorem IsLittleO.congr_ae_left (h : f₁ =o[l] g) (hf : f₁ =ᶠ[l] f₂) : f₂ =o[l] g :=
+  h.congr' hf (Eq.eventuallyEq rfl)
+
 theorem IsLittleO.congr_right (h : f =o[l] g₁) (hg : ∀ x, g₁ x = g₂ x) : f =o[l] g₂ :=
   h.congr (fun _ => rfl) hg
+
+theorem IsLitteO.congr_ae_right (h : f =o[l] g₁) (hg : g₁ =ᶠ[l] g₂) : f =o[l] g₂ :=
+  h.congr' (Eq.eventuallyEq rfl) hg
 
 @[trans]
 theorem _root_.Filter.EventuallyEq.trans_isBigO {f₁ f₂ : α → E} {g : α → F} (hf : f₁ =ᶠ[l] f₂)
@@ -1570,11 +1582,11 @@ variable {ι : Type*} {A : ι → α → E'} {C : ι → ℝ} {s : Finset ι}
 
 theorem IsBigOWith.sum (h : ∀ i ∈ s, IsBigOWith (C i) l (A i) g) :
     IsBigOWith (∑ i ∈ s, C i) l (fun x => ∑ i ∈ s, A i x) g := by
-  induction s using Finset.cons_induction with
-  | empty => simp only [isBigOWith_zero', Finset.sum_empty, forall_true_iff]
-  | cons i s is IH =>
-    simp only [is, Finset.sum_cons, Finset.forall_mem_cons] at h ⊢
-    exact h.1.add (IH h.2)
+  classical
+  induction' s using Finset.induction_on with i s is IH
+  · simp only [isBigOWith_zero', Finset.sum_empty, forall_true_iff]
+  · simp only [is, Finset.sum_insert, not_false_iff]
+    exact (h _ (Finset.mem_insert_self i s)).add (IH fun j hj => h _ (Finset.mem_insert_of_mem hj))
 
 theorem IsBigO.sum (h : ∀ i ∈ s, A i =O[l] g) : (fun x => ∑ i ∈ s, A i x) =O[l] g := by
   simp only [IsBigO_def] at *
@@ -1582,59 +1594,13 @@ theorem IsBigO.sum (h : ∀ i ∈ s, A i =O[l] g) : (fun x => ∑ i ∈ s, A i x
   exact ⟨_, IsBigOWith.sum hC⟩
 
 theorem IsLittleO.sum (h : ∀ i ∈ s, A i =o[l] g') : (fun x => ∑ i ∈ s, A i x) =o[l] g' := by
-  simp only [← Finset.sum_apply]
-  exact Finset.sum_induction A (· =o[l] g') (fun _ _ ↦ .add) (isLittleO_zero ..) h
+  classical
+  induction' s using Finset.induction_on with i s is IH
+  · simp only [isLittleO_zero, Finset.sum_empty, forall_true_iff]
+  · simp only [is, Finset.sum_insert, not_false_iff]
+    exact (h _ (Finset.mem_insert_self i s)).add (IH fun j hj => h _ (Finset.mem_insert_of_mem hj))
 
 end Sum
-
-section Prod
-variable {ι : Type*}
-
-theorem IsBigO.listProd {L : List ι} {f : ι → α → R} {g : ι → α → 𝕜}
-    (hf : ∀ i ∈ L, f i =O[l] g i) :
-    (fun x ↦ (L.map (f · x)).prod) =O[l] (fun x ↦ (L.map (g · x)).prod) := by
-  induction L with
-  | nil => simp [isBoundedUnder_const]
-  | cons i L ihL =>
-    simp only [List.map_cons, List.prod_cons, List.forall_mem_cons] at hf ⊢
-    exact hf.1.mul (ihL hf.2)
-
-theorem IsBigO.multisetProd {R 𝕜 : Type*} [SeminormedCommRing R] [NormedField 𝕜]
-    {s : Multiset ι} {f : ι → α → R} {g : ι → α → 𝕜} (hf : ∀ i ∈ s, f i =O[l] g i) :
-    (fun x ↦ (s.map (f · x)).prod) =O[l] (fun x ↦ (s.map (g · x)).prod) := by
-  obtain ⟨l, rfl⟩ : ∃ l : List ι, ↑l = s := Quotient.mk_surjective s
-  exact mod_cast IsBigO.listProd hf
-
-theorem IsBigO.finsetProd {R 𝕜 : Type*} [SeminormedCommRing R] [NormedField 𝕜]
-    {s : Finset ι} {f : ι → α → R} {g : ι → α → 𝕜}
-    (hf : ∀ i ∈ s, f i =O[l] g i) : (∏ i ∈ s, f i ·) =O[l] (∏ i ∈ s, g i ·) :=
-  .multisetProd hf
-
-theorem IsLittleO.listProd {L : List ι} {f : ι → α → R} {g : ι → α → 𝕜}
-    (h₁ : ∀ i ∈ L, f i =O[l] g i) (h₂ : ∃ i ∈ L, f i =o[l] g i) :
-    (fun x ↦ (L.map (f · x)).prod) =o[l] (fun x ↦ (L.map (g · x)).prod) := by
-  induction L with
-  | nil => simp at h₂
-  | cons i L ihL =>
-    simp only [List.map_cons, List.prod_cons, List.forall_mem_cons, List.exists_mem_cons_iff]
-      at h₁ h₂ ⊢
-    cases h₂ with
-    | inl hi => exact hi.mul_isBigO <| .listProd h₁.2
-    | inr hL => exact h₁.1.mul_isLittleO <| ihL h₁.2 hL
-
-theorem IsLittleO.multisetProd {R 𝕜 : Type*} [SeminormedCommRing R] [NormedField 𝕜]
-    {s : Multiset ι} {f : ι → α → R} {g : ι → α → 𝕜} (h₁ : ∀ i ∈ s, f i =O[l] g i)
-    (h₂ : ∃ i ∈ s, f i =o[l] g i) :
-    (fun x ↦ (s.map (f · x)).prod) =o[l] (fun x ↦ (s.map (g · x)).prod) := by
-  obtain ⟨l, rfl⟩ : ∃ l : List ι, ↑l = s := Quotient.mk_surjective s
-  exact mod_cast IsLittleO.listProd h₁ h₂
-
-theorem IsLittleO.finsetProd {R 𝕜 : Type*} [SeminormedCommRing R] [NormedField 𝕜]
-    {s : Finset ι} {f : ι → α → R} {g : ι → α → 𝕜} (h₁ : ∀ i ∈ s, f i =O[l] g i)
-    (h₂ : ∃ i ∈ s, f i =o[l] g i) : (∏ i ∈ s, f i ·) =o[l] (∏ i ∈ s, g i ·) :=
-  .multisetProd h₁ h₂
-
-end Prod
 
 /-! ### Relation between `f = o(g)` and `f / g → 0` -/
 

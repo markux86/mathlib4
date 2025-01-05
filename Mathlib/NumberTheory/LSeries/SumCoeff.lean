@@ -118,7 +118,7 @@ theorem aux₁₁ {c : ℂ} (hc : 0 < c.re) :
 
 theorem aux₁₂ {c : ℂ} (hc : c ≠ 0) :
     (fun t ↦ deriv (fun x : ℝ ↦ (x : ℂ) ^ c) t) =O[atTop] fun t ↦ t ^ (c.re - 1) := by
-  refine IsBigO.congr_left' (f₁ := fun t : ℝ ↦ c * (t : ℂ) ^ (c - 1)) ?_ ?_
+  refine IsBigO.congr'_left (f₁ := fun t : ℝ ↦ c * (t : ℂ) ^ (c - 1)) ?_ ?_
   · refine Asymptotics.IsBigO.const_mul_left ?_ _
     rw [← Asymptotics.isBigO_norm_left]
     refine EventuallyEq.isBigO ?_

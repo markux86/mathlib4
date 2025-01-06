@@ -569,6 +569,39 @@ lemma _root_.ContinuousLinearMap.hasTemperateGrowth (f : E →L[ℝ] F) :
     simpa [this] using .const _
   · exact (f.le_opNorm x).trans (by simp [mul_add])
 
+lemma _root_.Function.hasTemperateGrowth_id : (· : E → E).HasTemperateGrowth :=
+  (ContinuousLinearMap.id ℝ E).hasTemperateGrowth
+
+lemma _root_.Function.hasTemperateGrowth_neg : (-· : E → E).HasTemperateGrowth :=
+  (-ContinuousLinearMap.id ℝ E).hasTemperateGrowth
+
+/-- The addition of two `HasTemperateGrowth` functions is a `HasTemperateGrowth` function. -/
+lemma _root_.Function.HasTemperateGrowth.add {f : E → F} (hf : f.HasTemperateGrowth) {g : E → F}
+    (hg : g.HasTemperateGrowth) : Function.HasTemperateGrowth fun x ↦ f x + g x := by
+  refine ⟨hf.1.add hg.1, ?_⟩
+  intro n
+  rcases hf.2 n with ⟨kf, Cf, hCf⟩
+  rcases hg.2 n with ⟨kg, Cg, hCg⟩
+  have hCf_nn : 0 ≤ Cf := by simpa using le_trans (norm_nonneg _) (hCf 0)
+  have hCg_nn : 0 ≤ Cg := by simpa using le_trans (norm_nonneg _) (hCg 0)
+  use kf ⊔ kg, Cf + Cg
+  intro x
+  rw [iteratedFDeriv_add_apply' (contDiff_infty.mp hf.1 n) (contDiff_infty.mp hg.1 n)]
+  refine le_trans (norm_add_le _ _) ?_
+  rw [add_mul]
+  refine add_le_add ?_ ?_
+  · refine le_trans (hCf x) (mul_le_mul_of_nonneg_left ?_ hCf_nn)
+    simp [pow_le_pow_right₀]
+  · refine le_trans (hCg x) (mul_le_mul_of_nonneg_left ?_ hCg_nn)
+    simp [pow_le_pow_right₀]
+
+/-- Any Schwartz function `HasTemperateGrowth`. -/
+lemma hasTemperateGrowth (f : 𝓢(E, F)) : Function.HasTemperateGrowth f := by
+  refine ⟨f.smooth', ?_⟩
+  intro n
+  rcases f.decay' 0 n with ⟨C, hC⟩
+  exact ⟨0, C, by simpa using hC⟩
+
 variable [NormedAddCommGroup D] [MeasurableSpace D]
 
 open MeasureTheory Module

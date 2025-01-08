@@ -198,22 +198,8 @@ inductive HollomOrder : ℕ × ℕ × ℕ → ℕ × ℕ × ℕ → Prop
   | next_min {x y u v m : ℕ} : min x y + 1 ≤ min u v → HollomOrder (x, y, m + 1) (u, v, m)
   | next_add {x y u v m : ℕ} : x + y ≤ 2 * (u + v) → HollomOrder (x, y, m + 1) (u, v, m)
 
-instance : LE Hollom := ⟨fun x y ↦ HollomOrder (ofHollom x) (ofHollom y)⟩
-
-private lemma antisymm : (x y : Hollom) → x ≤ y → y ≤ x → x = y
-  | _, _, .twice _, .twice _ => by omega
-  | _, (_, _, _), .twice _, .within _ _ => by omega
-  | _, _, .twice _, .next_min _ => by omega
-  | _, _, .twice _, .next_add _ => by omega
-  | _, _, .within _ _, .twice _ => by omega
-  | _, _, .within _ _, .within _ _ => by
-      rw [Prod.ext_iff, Prod.ext_iff]
-      simp only [and_true]
-      omega
-  | _, _, .next_min _, .twice _ => by omega
-  | _, _, .next_add _, .twice _ => by omega
-
 instance : PartialOrder Hollom where
+  le x y := HollomOrder (ofHollom x) (ofHollom y)
   le_refl x := .within le_rfl le_rfl
   le_trans
   | _, _, _, .twice _, .twice _ => .twice (by omega)
@@ -232,7 +218,18 @@ instance : PartialOrder Hollom where
   | _, _, _, .next_add _, .within _ _ => .next_add (by omega)
   | _, _, _, .next_add _, .next_min _ => .twice (by omega)
   | _, _, _, .next_add _, .next_add _ => .twice (by omega)
-  le_antisymm := antisymm
+  le_antisymm
+  | _, _, .twice _, .twice _ => by omega
+  | _, (_, _, _), .twice _, .within _ _ => by omega
+  | _, _, .twice _, .next_min _ => by omega
+  | _, _, .twice _, .next_add _ => by omega
+  | _, _, .within _ _, .twice _ => by omega
+  | _, _, .within _ _, .within _ _ => by
+      rw [Prod.ext_iff, Prod.ext_iff]
+      simp only [and_true]
+      omega
+  | _, _, .next_min _, .twice _ => by omega
+  | _, _, .next_add _, .twice _ => by omega
 
 @[simp] lemma toHollom_le_toHollom_iff_fixed_right {a b c d n : ℕ} :
     h(a, b, n) ≤ h(c, d, n) ↔ a ≤ c ∧ b ≤ d := by
@@ -283,25 +280,19 @@ lemma induction_on_level {n : ℕ} {p : (x : Hollom) → x ∈ level n → Prop}
 For each `n`, there is an order embedding from ℕ × ℕ (which has the product order) to the Hollom
 partial order.
 -/
-@[simps]
 def embed (n : ℕ) : ℕ × ℕ ↪o Hollom where
   toFun x := h(x.1, x.2, n)
   inj' x := by aesop
   map_rel_iff' := by simp
 
-lemma embed_monotone {n : ℕ} : Monotone (embed n) := (embed n).monotone
+lemma embed_apply (n : ℕ) (x y : ℕ) : embed n (x, y) = h(x, y, n) := rfl
 
 lemma embed_strictMono {n : ℕ} : StrictMono (embed n) := (embed n).strictMono
-
-@[simp] lemma embed_le_embed_iff {n : ℕ} {x y} : embed n x ≤ embed n y ↔ x ≤ y :=
-  (embed n).le_iff_le
-
-@[simp] lemma embed_lt_embed_iff {n : ℕ} {x y} : embed n x < embed n y ↔ x < y :=
-  (embed n).lt_iff_lt
 
 lemma level_eq_range (n : ℕ) : level n = Set.range (embed n) := by
   simp [level, Set.range, embed]
 
+open Function in
 lemma pairwise_disjoint_level : Pairwise (Disjoint on level) := by
   simp [Pairwise, Function.onFun, level_eq, Set.disjoint_left]
 
@@ -310,7 +301,7 @@ lemma pairwiseDisjoint_level : Set.PairwiseDisjoint .univ level :=
 
 lemma level_isPWO {n : ℕ} : (level n).IsPWO := by
   rw [level_eq_range, ← Set.image_univ]
-  refine Set.IsPWO.image_of_monotone ?_ embed_monotone
+  refine Set.IsPWO.image_of_monotone ?_ (embed n).monotone
   rw [← Set.univ_prod_univ]
   exact Set.IsPWO.prod univ_isPWO_of_linearOrder univ_isPWO_of_linearOrder
 
@@ -331,6 +322,7 @@ lemma ordConnected_level {n : ℕ} : (level n).OrdConnected := by
   intro a b c d ac bd e f g h1 h2
   exact le_antisymm (le_of_toHollom_le_toHollom h1) (le_of_toHollom_le_toHollom h2)
 
+/-- The map from `(x, y, n)` to `x + y`. -/
 @[pp_nodot] def line (x : Hollom) : ℕ := (ofHollom x).1 + (ofHollom x).2.1
 
 @[simp] lemma line_toHollom (x : ℕ × ℕ × ℕ) : line (toHollom x) = x.1 + x.2.1 := rfl
@@ -350,31 +342,11 @@ lemma line_injOn {C : Set Hollom} (n : ℕ) (hC : IsChain (· ≤ ·) C) (hCn : 
 
 lemma add_lt_add_of_lt {a b c d n : ℕ} (h : h(a, b, n) < h(c, d, n)) : a + b < c + d := by
   change embed n (a, b) < embed n (c, d) at h
-  rw [embed_lt_embed_iff] at h
-  simp only [Prod.mk_lt_mk] at h
+  simp only [OrderEmbedding.lt_iff_lt, Prod.mk_lt_mk] at h
   omega
-
--- written K_{n,s} in the paper
-def levelLine (n s : ℕ) : Set Hollom := {x ∈ level n | line x = s}
-
-@[simp] lemma toHollom_mem_levelLine_iff {n s : ℕ} {x : ℕ × ℕ × ℕ}:
-    toHollom x ∈ levelLine n s ↔ x.1 + x.2.1 = s ∧ x.2.2 = n := by
-  aesop (add simp levelLine)
-
--- implicit in 5.8.ii
-lemma levelLine_subset_level {n s : ℕ} : levelLine n s ⊆ level n := Set.sep_subset _ _
-
--- 5.8.ii
-lemma isAntichain_levelLine {n s : ℕ} : IsAntichain (· ≤ ·) (levelLine n s) := by
-  rw [IsAntichain, Set.Pairwise]
-  simp
-  omega
-
-lemma iUnion_levelLine {n : ℕ} : ⋃ s, levelLine n s = level n := by
-  simp [Set.ext_iff]
 
 -- Lemma 5.9
-lemma no_infinite_antichain {A : Set Hollom} (hC : IsAntichain (· ≤ ·) A) : A.Finite := by
+theorem no_infinite_antichain {A : Set Hollom} (hC : IsAntichain (· ≤ ·) A) : A.Finite := by
   let f (x : Hollom) : ℕ := (ofHollom x).2.2
   have (n : ℕ) : A ∩ f ⁻¹' {n} ⊆ level n := fun x ↦ by induction x with | h x => simp [f]
   apply Set.Finite.of_finite_fibers f
@@ -410,7 +382,7 @@ open Filter
 
 -- Lemma 5.10
 -- every chain has a finite intersection with infinitely many levels
-lemma exists_finite_intersection (hC : IsChain (· ≤ ·) C) :
+theorem exists_finite_intersection (hC : IsChain (· ≤ ·) C) :
     ∃ᶠ n in atTop, (C ∩ level n).Finite := by
   rw [frequently_atTop]
   intro n₀
@@ -430,7 +402,7 @@ lemma exists_finite_intersection (hC : IsChain (· ≤ ·) C) :
   have : ((C ∩ level (n + 1)) \ D).Infinite := by
     have : (C ∩ level (n + 1) ∩ D).Finite := by
       refine .subset (.image (embed (n + 1)) (triangle_finite (2 * (u + v)))) ?_
-      simp +contextual [Set.subset_def, D]
+      simp +contextual [Set.subset_def, D, embed_apply]
     specialize hC' (n + 1) (by omega)
     rw [← (C ∩ level (n + 1)).inter_union_diff D, Set.infinite_union] at hC'
     refine hC'.resolve_left ?_
@@ -455,7 +427,14 @@ section SpinalMap
 
 variable {α : Type*} [PartialOrder α] {C : Set α}
 
+/--
+A spinal map is a function `f : α → C` which is the identity on `C`, and for which each fiber is an
+antichain.
+Provided `C` is a chain, the existence of a spinal map is equivalent to the fact that `C` is a
+spine.
+-/
 structure SpinalMap (C : Set α) where
+  /-- The underlying function of a spinal map. -/
   (toFun : α → α)
   (mem' : ∀ x, toFun x ∈ C)
   (eq_self_of_mem' : ∀ x ∈ C, toFun x = x)
@@ -532,7 +511,7 @@ Given a chain `C` in a partial order `α`, the existence of the following are eq
 In fact, these two are in bijection, but we only need the weaker version that their existence
 is equivalent.
 -/
-lemma exists_partition_iff_nonempty_spinalMap
+theorem exists_partition_iff_nonempty_spinalMap
     {α : Type*} [PartialOrder α] {C : Set α} (hC : IsChain (· ≤ ·) C) :
     (∃ S, Setoid.IsPartition S ∧ ∀ A ∈ S, IsAntichain (· ≤ ·) A ∧ (A ∩ C).Nonempty) ↔
       Nonempty (SpinalMap C) := by
@@ -561,6 +540,11 @@ section make_chains
 
 open Finset
 
+/--
+An explicit contiguous chain between `(a, b)` and `(c, d)` in `ℕ × ℕ`. We implement this as the
+union of two disjoint sets: the first is the chain from `(a, b)` to `(a, d)`, and the second is the
+chain from `(a, d)` to `(c, d)`.
+-/
 def chainBetween (a b c d : ℕ) : Finset (ℕ × ℕ) :=
   if a ≤ c ∧ b ≤ d
     then Ico (a, b) (a, d) ∪ Icc (a, d) (c, d)
@@ -580,18 +564,6 @@ lemma image_chainBetween_isChain {a b c d n : ℕ} :
   apply chainBetween_isChain.image
   simp
 
-lemma left_mem_chainBetween {a b c d : ℕ} (hac : a ≤ c) (hbd : b ≤ d) :
-    (a, b) ∈ chainBetween a b c d := by
-  rw [chainBetween, if_pos ⟨hac, hbd⟩]
-  simp
-  omega
-
-lemma right_mem_chainBetween {a b c d : ℕ} (hac : a ≤ c) (hbd : b ≤ d) :
-    (c, d) ∈ chainBetween a b c d := by
-  rw [chainBetween, if_pos ⟨hac, hbd⟩]
-  simp
-  omega
-
 open Finset in
 lemma card_chainBetween {a b c d : ℕ} (hac : a ≤ c) (hbd : b ≤ d) :
     #(chainBetween a b c d) = c + d + 1 - (a + b) := by
@@ -603,52 +575,12 @@ lemma card_chainBetween {a b c d : ℕ} (hac : a ≤ c) (hbd : b ≤ d) :
     simp
     omega
 
-open Finset in
 lemma chainBetween_subset {a b c d : ℕ} :
     chainBetween a b c d ⊆ Finset.Icc (a, b) (c, d) := by
   rw [chainBetween]
-  split_ifs
-  · rw [union_subset_iff]
-    constructor
-    · simp only [subset_iff, mem_Icc, mem_Ico, and_imp, Prod.forall, Prod.mk_le_mk, Prod.mk_lt_mk]
-      omega
-    · simp only [subset_iff, mem_Icc, and_imp, Prod.forall, Prod.mk_le_mk]
-      omega
-  · simp
-
-lemma chainBetween_inter {a b c d e f : ℕ}
-    (hac : a ≤ c) (hbd : b ≤ d) (hce : c ≤ e) (hdf : d ≤ f) :
-    chainBetween a b c d ∩ chainBetween c d e f = {(c, d)} := by
-  ext ⟨x, y⟩
-  simp [chainBetween, if_pos, *]
-  omega
+  aesop (add simp Finset.subset_iff)
 
 end make_chains
-
-/--
-If `C ∩ level n` is infinite, then infinitely many `C ∩ levelLine n s` are nonempty.
-We later show that in the full context, cofinitely many are nonempty, but this is a useful
-helper lemma.
--/
-lemma levelLine_nonempty_of_infinite {n s : ℕ}
-    (hCn : (C ∩ level n).Infinite) :
-    ∃ s' > s, (C ∩ levelLine n s').Nonempty := by
-  by_contra!
-  have h₁ : C ∩ level n ⊆ embed n '' {(a, b) | a + b ≤ s} := by
-    simp only [gt_iff_lt, Set.eq_empty_iff_forall_not_mem, Set.mem_inter_iff, not_and, «forall»,
-      Prod.forall, toHollom_mem_levelLine_iff] at this
-    simp only [Set.subset_def, Set.mem_inter_iff, Set.mem_image, Set.mem_setOf_eq, Prod.exists,
-      and_imp, «forall», toHollom_mem_level_iff, Prod.forall]
-    rintro a b n hab rfl
-    refine ⟨a, b, ?_, rfl⟩
-    by_contra! hsab
-    exact this _ hsab _ _ _ hab rfl rfl
-  have h₂ : Set.Finite {(a, b) | a + b ≤ s} := by
-    refine (Set.finite_Iic (s, s)).subset ?_
-    rintro ⟨a, b⟩
-    simp only [Set.mem_setOf_eq, Set.mem_Iic, Prod.mk_le_mk]
-    omega
-  exact hCn ((h₂.image _).subset h₁)
 
 lemma line_mapsTo {x y : Hollom} (hxy : (ofHollom x).2.2 = (ofHollom y).2.2) :
     Set.MapsTo line (Set.Icc x y) (Set.Icc (line x) (line y)) := by
@@ -710,7 +642,7 @@ lemma exists_line_eq_aux (f : SpinalMap C) {n xl yl xh yh : ℕ}
   have int_eq : int = Set.Icc h(xl, yl, n) h(xh, yh, n) := by
     simp only [coe_image, coe_Icc, int, embed_image_Icc]
   have hI : IsChain (· ≤ ·) I.toSet := hC.mono (by simp [Set.subset_def, I])
-  have hIn : I.toSet ⊆ level n := by simp +contextual [Set.subset_def, I, int]
+  have hIn : I.toSet ⊆ level n := by simp +contextual [Set.subset_def, I, int, embed_apply]
   have cI : xh + yh + 1 - (xl + yl) ≤ #I := C_inter_Icc_large f hC hx hy hlo hhi
   have : Set.MapsTo line int (Icc (xl + yl) (xh + yh)) := by
     rw [int_eq, coe_Icc]
@@ -849,7 +781,7 @@ lemma apply_eq_of_line_eq_aux (f : SpinalMap C) {n xl yl xh yh : ℕ}
         simp only [toHollom_le_toHollom_iff_fixed_right] at h₁l h₁h h₂l h₂h ⊢
         omega
 
-lemma apply_eq_of_line_eq (f : SpinalMap C) {n : ℕ} (hC : IsChain (· ≤ ·) C)
+theorem apply_eq_of_line_eq (f : SpinalMap C) {n : ℕ} (hC : IsChain (· ≤ ·) C)
     {lo hi : Hollom} (hlo : lo ∈ C ∩ level n) (hhi : hi ∈ C ∩ level n) (hlohi : lo ≤ hi)
     {x y : Hollom} (h : line x = line y)
     (h₁l : lo ≤ x) (h₂l : lo ≤ y) (h₁h : x ≤ hi) (h₂h : y ≤ hi) :
@@ -868,6 +800,12 @@ lemma apply_eq_of_line_eq (f : SpinalMap C) {n : ℕ} (hC : IsChain (· ≤ ·) 
   induction hhi.2 using induction_on_level with | h xhi yhi =>
   exact apply_eq_of_line_eq_aux f hC hlo.1 hhi.1 (by simp_all) (by simp_all) h₁l h₂l h₁h h₂h
 
+/--
+Construction of the set `R`, which has the following key properties:
+* It is a subset of `level n`.
+* Each of its elements is comparable to all of `C ∩ level n`.
+* There exists an `a` such that `{(x, y, n) | x ≥ a ∧ y ≥ a} ⊆ R`.
+-/
 def R (n : ℕ) (C : Set Hollom) : Set Hollom := {x ∈ level n | ∀ y ∈ C ∩ level n, x ≤ y ∨ y ≤ x}
 
 variable {n : ℕ}
@@ -918,12 +856,18 @@ lemma R_diff_infinite (h : (C ∩ level n).Finite) : (R n C \ (C ∩ level n)).I
 
 -- we could state this as Disjoint (f '' (R n C)) (C ∩ level n), but this is more
 -- annoying than helpful
-lemma R_maps {x : Hollom} (hx : x ∈ R n C) (hx' : x ∉ C ∩ level n) : f x ∉ C ∩ level n := by
+lemma not_R_hits_same {x : Hollom} (hx : x ∈ R n C) (hx' : x ∉ C ∩ level n) :
+    f x ∉ C ∩ level n := by
   intro hfx
   apply f.incomp_apply _ (hx.2 _ hfx).symm
   exact ne_of_mem_of_not_mem hfx hx'
 
 open Classical in
+/--
+Given a subset `C` of the Hollom partial order, and an index `n`, find the smallest element of
+`C ∩ level (n + 1)`, expressed as `(x₀, y₀, n + 1)`.
+This is only the global minimum provided `C` is a chain, which it is in context.
+-/
 noncomputable def x0y0 (n : ℕ) (C : Set Hollom) : ℕ × ℕ :=
   if h : (C ∩ level (n + 1)).Nonempty
     then wellFounded_lt.min {x | embed (n + 1) x ∈ C} <| by
@@ -941,10 +885,18 @@ lemma x0y0_min (z : ℕ × ℕ) (hC : IsChain (· ≤ ·) C) (h : embed (n + 1) 
     embed (n + 1) (x0y0 n C) ≤ embed (n + 1) z := by
   have : (C ∩ level (n + 1)).Nonempty := ⟨_, h, by simp [level_eq_range]⟩
   refine hC.le_of_not_lt h (x0y0_mem this) ?_
-  rw [x0y0, dif_pos this, embed_lt_embed_iff]
+  rw [x0y0, dif_pos this, OrderEmbedding.lt_iff_lt]
   exact wellFounded_lt.not_lt_min {x | embed (n + 1) x ∈ C} ?_ h
 
+/--
+Given a subset `C` of the Hollom partial order, and an index `n`, find the smallest element of
+`C ∩ level (n + 1)`, and `x0 n C` will be the x-coordinate thereof.
+-/
 noncomputable def x0 (n : ℕ) (C : Set Hollom) : ℕ := (x0y0 n C).1
+/--
+Given a subset `C` of the Hollom partial order, and an index `n`, find the smallest element of
+`C ∩ level (n + 1)`, and `y0 n C` will be the y-coordinate thereof.
+-/
 noncomputable def y0 (n : ℕ) (C : Set Hollom) : ℕ := (x0y0 n C).2
 
 lemma x0_y0_mem (h : (C ∩ level (n + 1)).Nonempty) : h(x0 n C, y0 n C, n + 1) ∈ C := x0y0_mem h
@@ -953,6 +905,12 @@ lemma x0_y0_min (hC : IsChain (· ≤ ·) C) {a b : ℕ} (h : h(a, b, n + 1) ∈
     h(x0 n C, y0 n C, n + 1) ≤ h(a, b, n + 1) := x0y0_min (a, b) hC h
 
 open Classical in
+/--
+Construction of the set `S`, which has the following key properties:
+* It is a subset of `R`.
+* No element of it can be mapped to an element of `C ∩ level (n + 1)` by `f`.
+* There exists an `a` such that `{(x, y, n) | x ≥ a ∧ y ≥ a} ⊆ S`.
+-/
 noncomputable def S (n : ℕ) (C : Set Hollom) : Set Hollom :=
   if (C ∩ level (n + 1)).Finite
     then {x ∈ R n C | ∀ y ∈ C ∩ level (n + 1), x ≤ y ∨ y ≤ x}
@@ -996,9 +954,9 @@ lemma square_subset_S_case_2 (h : (C ∩ level n).Finite) (h' : (C ∩ level (n 
   rw [S, if_neg h']
   filter_upwards [eventually_ge_atTop (x0 n C + 1), eventually_ge_atTop (y0 n C + 1),
     square_subset_R h] with a hax hay haR
-  aesop
+  aesop (add simp embed_apply)
 
-lemma square_subset_S (h : (C ∩ level n).Finite) :
+theorem square_subset_S (h : (C ∩ level n).Finite) :
     ∀ᶠ a in atTop, embed n '' Set.Ici (a, a) ⊆ S n C \ (C ∩ level n) :=
   (C ∩ level (n + 1)).finite_or_infinite.elim (square_subset_S_case_1 h) (square_subset_S_case_2 h)
 
@@ -1024,7 +982,7 @@ lemma left_or_right_bias {n : ℕ} (a b : ℕ)
   simp_all only [toHollom_le_toHollom_iff_fixed_right, true_and, not_le, and_true]
   exact ⟨_, _, ⟨hd.le, hc.le⟩, rfl⟩
 
-lemma S_maps (f : SpinalMap C) (hC : IsChain (· ≤ ·) C)
+theorem not_S_hits_next (f : SpinalMap C) (hC : IsChain (· ≤ ·) C)
     {x : Hollom} (hx : x ∈ S n C) (hx' : x ∉ C ∩ level n) :
     f x ∉ C ∩ level (n + 1) := by
   cases (C ∩ level (n + 1)).finite_or_infinite
@@ -1079,7 +1037,7 @@ lemma S_maps (f : SpinalMap C) (hC : IsChain (· ≤ ·) C)
         rw [← this, ← hfp, f.eq_self_of_mem hp.1]
       exact f.not_le_of_eq this.symm (by simp) (.next_min (hx.2.trans' (by simp)))
 
-lemma must_send (f : SpinalMap C) (hC : IsChain (· ≤ ·) C) (hn : n ≠ 0) :
+lemma S_mapsTo_previous (f : SpinalMap C) (hC : IsChain (· ≤ ·) C) (hn : n ≠ 0) :
     ∀ x ∈ S n C \ (C ∩ level n), f x ∈ C ∩ level (n - 1) := by
   intro x hx
   refine ⟨f.mem _, ?_⟩
@@ -1090,12 +1048,12 @@ lemma must_send (f : SpinalMap C) (hC : IsChain (· ≤ ·) C) (hn : n ≠ 0) :
   simp only [toHollom_mem_level_iff]
   have : m ≠ n := by
     rintro rfl
-    have : f _ ∉ _ := R_maps (S_subset_R hx.1) hx.2
+    have : f _ ∉ _ := not_R_hits_same (S_subset_R hx.1) hx.2
     simp only [Set.mem_inter_iff, SpinalMap.mem, true_and] at this
     simp [← hp] at this
   have : n + 1 ≠ m := by
     rintro rfl
-    have : f _ ∉ _ := S_maps f hC hx.1 hx.2
+    have : f _ ∉ _ := not_S_hits_next f hC hx.1 hx.2
     simp only [Set.mem_inter_iff, SpinalMap.mem, true_and] at this
     simp [← hp] at this
   have hp' : f h(a, b, m) = f h(x, y, n) := by
@@ -1113,7 +1071,7 @@ lemma must_send (f : SpinalMap C) (hC : IsChain (· ≤ ·) C) (hn : n ≠ 0) :
   omega
 
 open scoped Finset in
-lemma final_part (hC : IsChain (· ≤ ·) C)
+theorem not_S_mapsTo_previous (hC : IsChain (· ≤ ·) C)
     (hCn : (C ∩ level n).Finite) (hn : n ≠ 0)
     (h : ∀ x ∈ S n C \ (C ∩ level n), f x ∈ C ∩ level (n - 1)) :
     False := by
@@ -1161,10 +1119,15 @@ lemma final_part (hC : IsChain (· ≤ ·) C)
       (hC.mono (by simp +contextual [Set.subset_def]))
       (by simp +contextual [Set.subset_def])
   have line_F_mapsTo := line_mapsTo.comp F_mapsTo
-  have line_F_inj := line_inj.comp F_inj F_mapsTo
   have := Finset.card_le_card_of_injOn _ line_F_mapsTo (line_inj.comp F_inj F_mapsTo)
   simp only [Finset.card_range] at this
   omega
+
+theorem no_spinalMap (hC : IsChain (· ≤ ·) C) (f : SpinalMap C) : False := by
+  obtain ⟨n, hn, hn'⟩ : ∃ n, n ≠ 0 ∧ (C ∩ Hollom.level n).Finite := by
+    obtain ⟨n, hn, hn'⟩ := Filter.frequently_atTop.1 (Hollom.exists_finite_intersection hC) 1
+    exact ⟨n, by omega, hn'⟩
+  exact Hollom.not_S_mapsTo_previous hC hn' hn (Hollom.S_mapsTo_previous f hC hn)
 
 end Hollom
 
@@ -1189,8 +1152,6 @@ theorem aharoni_korman_false :
   · rintro C ⟨hC, h⟩
     rw [Hollom.exists_partition_iff_nonempty_spinalMap hC] at h
     obtain ⟨f⟩ := h
-    obtain ⟨n, hn, hn'⟩ : ∃ n, n ≠ 0 ∧ (C ∩ Hollom.level n).Finite := by
-      obtain ⟨n, hn, hn'⟩ := Filter.frequently_atTop.1 (Hollom.exists_finite_intersection hC) 1
-      exact ⟨n, by omega, hn'⟩
-    have := Hollom.must_send f hC hn
-    exact Hollom.final_part hC hn' hn this
+    exact Hollom.no_spinalMap hC f
+
+#lint

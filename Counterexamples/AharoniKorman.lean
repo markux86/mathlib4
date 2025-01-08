@@ -153,7 +153,7 @@ end sectR
 end to_move
 
 attribute [aesop norm 10 tactic] Lean.Elab.Tactic.Omega.omegaDefault
-attribute [aesop 2 simp] Set.subset_def
+attribute [aesop 2 simp] Set.subset_def Finset.subset_iff
 
 /-- A type synonym on ℕ³ on which we will construct Hollom's partial order P_5. -/
 def Hollom : Type := ℕ × ℕ × ℕ
@@ -292,13 +292,6 @@ lemma embed_strictMono {n : ℕ} : StrictMono (embed n) := (embed n).strictMono
 lemma level_eq_range (n : ℕ) : level n = Set.range (embed n) := by
   simp [level, Set.range, embed]
 
-open Function in
-lemma pairwise_disjoint_level : Pairwise (Disjoint on level) := by
-  simp [Pairwise, Function.onFun, level_eq, Set.disjoint_left]
-
-lemma pairwiseDisjoint_level : Set.PairwiseDisjoint .univ level :=
-  pairwise_disjoint_level.pairwiseDisjoint _
-
 lemma level_isPWO {n : ℕ} : (level n).IsPWO := by
   rw [level_eq_range, ← Set.image_univ]
   refine Set.IsPWO.image_of_monotone ?_ (embed n).monotone
@@ -327,23 +320,18 @@ lemma ordConnected_level {n : ℕ} : (level n).OrdConnected := by
 
 @[simp] lemma line_toHollom (x : ℕ × ℕ × ℕ) : line (toHollom x) = x.1 + x.2.1 := rfl
 
-lemma line_toHollom_mk (x y z : ℕ) : line (h(x, y, z)) = x + y := rfl
-
 lemma line_injOn {C : Set Hollom} (n : ℕ) (hC : IsChain (· ≤ ·) C) (hCn : C ⊆ level n) :
     C.InjOn line := by
   rw [Set.InjOn]
-  simp only [«forall», line_toHollom, Prod.forall, EmbeddingLike.apply_eq_iff_eq, Prod.mk.injEq]
-  intro a b n' hab c d n'' hcd habcd
-  obtain rfl : n' = n := by simpa using hCn hab
-  obtain rfl : n'' = n' := by simpa using hCn hcd
-  have := hC.total hab hcd
-  simp only [toHollom_le_toHollom_iff_fixed_right] at this
-  omega
+  intro x hx y hy h
+  induction hCn hx using induction_on_level with | h a b =>
+  induction hCn hy using induction_on_level with | h c d =>
+  have := hC.total hx hy
+  aesop
 
 lemma add_lt_add_of_lt {a b c d n : ℕ} (h : h(a, b, n) < h(c, d, n)) : a + b < c + d := by
   change embed n (a, b) < embed n (c, d) at h
-  simp only [OrderEmbedding.lt_iff_lt, Prod.mk_lt_mk] at h
-  omega
+  aesop
 
 -- Lemma 5.9
 theorem no_infinite_antichain {A : Set Hollom} (hC : IsAntichain (· ≤ ·) A) : A.Finite := by
@@ -630,12 +618,10 @@ lemma C_inter_Icc_large (f : SpinalMap C) {n : ℕ} {xl yl xh yh : ℕ}
   exact Finset.card_le_card_of_injOn f D_maps f_inj
 
 open Classical Finset in
-lemma exists_line_eq_aux (f : SpinalMap C) {n xl yl xh yh : ℕ}
+lemma card_C_inter_Icc_eq (f : SpinalMap C) {n : ℕ} {xl yl xh yh : ℕ}
     (hC : IsChain (· ≤ ·) C)
     (hx : xl ≤ xh) (hy : yl ≤ yh)
     (hlo : h(xl, yl, n) ∈ C) (hhi : h(xh, yh, n) ∈ C) :
-    (∀ s : ℕ, xl + yl ≤ s → s ≤ xh + yh →
-      ∃ x ∈ C ∩ Set.Icc h(xl, yl, n) h(xh, yh, n), line x = s) ∧
     #{x ∈ (Icc (xl, yl) (xh, yh)).image (embed n) | x ∈ C} = xh + yh + 1 - (xl + yl) := by
   set int : Finset Hollom := (Icc (xl, yl) (xh, yh)).image (embed n)
   set I : Finset Hollom := {x ∈ int | x ∈ C}
@@ -643,39 +629,13 @@ lemma exists_line_eq_aux (f : SpinalMap C) {n xl yl xh yh : ℕ}
     simp only [coe_image, coe_Icc, int, embed_image_Icc]
   have hI : IsChain (· ≤ ·) I.toSet := hC.mono (by simp [Set.subset_def, I])
   have hIn : I.toSet ⊆ level n := by simp +contextual [Set.subset_def, I, int, embed_apply]
-  have cI : xh + yh + 1 - (xl + yl) ≤ #I := C_inter_Icc_large f hC hx hy hlo hhi
   have : Set.MapsTo line int (Icc (xl + yl) (xh + yh)) := by
     rw [int_eq, coe_Icc]
     exact line_mapsTo rfl
   replace this : Set.MapsTo line I (Icc (xl + yl) (xh + yh)) := this.mono_left (filter_subset _ _)
-  refine ⟨?_, ?_⟩
-  · intro s hxs hys
-    have surj : Set.SurjOn line I (Icc (xl + yl) (xh + yh)) :=
-      surjOn_of_injOn_of_card_le _ this (line_injOn _ hI hIn) (by rwa [Nat.card_Icc])
-    obtain ⟨z, hz, rfl⟩ := surj (Finset.mem_Icc.2 ⟨hxs, hys⟩)
-    rw [← int_eq]
-    exact ⟨z, by simpa [I, and_comm] using hz, rfl⟩
-  · refine le_antisymm ?_ (C_inter_Icc_large f hC hx hy hlo hhi)
-    rw [← Nat.card_Icc]
-    exact card_le_card_of_injOn _ this (line_injOn _ hI hIn)
-
-lemma exists_line_eq (f : SpinalMap C) {n s : ℕ} {lo hi : Hollom}
-    (hC : IsChain (· ≤ ·) C)
-    (hlo : lo ∈ C ∩ level n) (hhi : hi ∈ C ∩ level n)
-    (h : lo ≤ hi)
-    (hxs : line lo ≤ s) (hys : s ≤ line hi) :
-    ∃ x ∈ C ∩ Set.Icc lo hi, line x = s := by
-  induction hlo.2 using induction_on_level with | h xl yl =>
-  induction hhi.2 using induction_on_level with | h xh yh =>
-  exact (exists_line_eq_aux f hC (by simp_all) (by simp_all) hlo.1 hhi.1).1 _ hxs hys
-
-open Classical Finset in
-lemma card_C_inter_Icc_eq (f : SpinalMap C) {n : ℕ} {xl yl xh yh : ℕ}
-    (hC : IsChain (· ≤ ·) C)
-    (hx : xl ≤ xh) (hy : yl ≤ yh)
-    (hlo : h(xl, yl, n) ∈ C) (hhi : h(xh, yh, n) ∈ C) :
-    #{x ∈ (Icc (xl, yl) (xh, yh)).image (embed n) | x ∈ C} = xh + yh + 1 - (xl + yl) :=
-  (exists_line_eq_aux f hC hx hy hlo hhi).2
+  refine le_antisymm ?_ (C_inter_Icc_large f hC hx hy hlo hhi)
+  rw [← Nat.card_Icc]
+  exact card_le_card_of_injOn _ this (line_injOn _ hI hIn)
 
 open Finset in
 lemma apply_eq_of_line_eq_step (f : SpinalMap C) {n xl yl xh yh : ℕ}
@@ -810,9 +770,6 @@ def R (n : ℕ) (C : Set Hollom) : Set Hollom := {x ∈ level n | ∀ y ∈ C �
 
 variable {n : ℕ}
 lemma R_subset_level : R n C ⊆ level n := Set.sep_subset (level n) _
-
-lemma mem_R {n : ℕ} {C : Set Hollom} {x} :
-  x ∈ R n C ↔ x ∈ level n ∧ ∀ y ∈ C ∩ level n, x ≤ y ∨ y ≤ x := Iff.rfl
 
 lemma square_subset_above (h : (C ∩ level n).Finite) :
     ∀ᶠ a in atTop, embed n '' Set.Ici (a, a) ⊆ {x | ∀ y ∈ C ∩ level n, y ≤ x} \ (C ∩ level n) := by
@@ -1153,5 +1110,3 @@ theorem aharoni_korman_false :
     rw [Hollom.exists_partition_iff_nonempty_spinalMap hC] at h
     obtain ⟨f⟩ := h
     exact Hollom.no_spinalMap hC f
-
-#lint

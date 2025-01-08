@@ -25,7 +25,8 @@ counterexample P_5 and show it satisfies neither of the above, and thus disprove
 See https://arxiv.org/abs/2411.16844 for further details.
 
 The proof structure is as follows:
-* Begin by defining the type `Hollom`, and giving it the partial order structure as required.
+* Begin by defining the type `Hollom` as a synonym for `ℕ³` and giving it the partial order
+  structure as required.
 * Define the levels `level` of the partial order, corresponding to `L` in the informal proof.
 * Show that this partial order has no infinite antichains (`Hollom.no_infinite_antichain`).
 * Given a chain `C`, show that for infinitely many `n`, `C ∩ level n` must be finite

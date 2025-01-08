@@ -23,6 +23,37 @@ order satisfies at least one of the following:
 In November 2024, Hollom disproved this conjecture. In this file, we construct Hollom's
 counterexample P_5 and show it satisfies neither of the above, and thus disprove the conjecture.
 See https://arxiv.org/abs/2411.16844 for further details.
+
+The proof structure is as follows:
+* Begin by defining the type `Hollom`, and giving it the partial order structure as required.
+* Define the levels `level` of the partial order, corresponding to `L` in the informal proof.
+* Show that this partial order has no infinite antichains (`Hollom.no_infinite_antichain`).
+* Given a chain `C`, show that for infinitely many `n`, `C ∩ level n` must be finite
+  (`exists_finite_intersection`).
+* Given a chain `C`, the existence of a partition with the desired properties is equivalent to the
+  existence of a "spinal map" (`exists_partition_iff_nonempty_spinalMap`). A spinal map is a
+  function from the partial order to `C`, which is identity on `C` and for which each fiber is an
+  antichain.
+
+From this point forward, we assume `C` is a chain and that we have a spinal map to `C`, with the
+aim of reaching a contradiction (as then, no such partition can exist). We may further assume that
+`n ≠ 0` and `C ∩ level n` is finite.
+
+* Define a subset `S` of `level n`, and we will aim to show a contradiction by considering
+  the image of `S` under the spinal map. By construction, no element of `S` can be mapped into
+  `level n`.
+* The subset `S \ (C ∩ level n)` contains some "infinite square", i.e. a set of the form
+  `{(x, y, n) | a ≤ x ∧ a ≤ y}` for some `a` (`square_subset_S`).
+* For two points of `C` in the same level, the intersection of `C` with the interval between
+  them is exactly the length of a maximal chain between them (`card_C_inter_Icc_eq`).
+* For two points of `C` in the same level, and two points `(a, b, n)` and `(c, d, n)` between them,
+  if `a + b = c + d` then `f (a, b, n) = f (c, d, n)` (`apply_eq_of_line_eq`).
+* No element of `S ​\ (C ∩ level n)` can be mapped into `level (n + 1)` (`not_S_hits_next`). This
+  step vitally uses the previous two facts.
+* If all of `S \ (C ∩ level n)` is mapped into `level (n - 1)`, then we have a contradiction
+  (`not_S_mapsTo_previous`).
+* But as `f` maps each element of `S \ (C ∩ level n)` to `level (n - 1) ∪ level n ∪ level (n + 1)`,
+  we have a contradiction (`no_spinalMap`), and therefore show that no spinal map exists.
 -/
 
 section to_move
@@ -191,7 +222,7 @@ lemma induction {p : Hollom → Prop} (h : ∀ x y z, p (h(x, y, z))) : ∀ x, p
 /--
 The ordering on ℕ³ which is used to define Hollom's example P₅
 -/
-@[mk_iff, aesop 50% cases]
+@[mk_iff]
 inductive HollomOrder : ℕ × ℕ × ℕ → ℕ × ℕ × ℕ → Prop
   | twice {x y n u v m : ℕ} : m + 2 ≤ n → HollomOrder (x, y, n) (u, v, m)
   | within {x y u v m : ℕ} : x ≤ u → y ≤ v → HollomOrder (x, y, m) (u, v, m)
@@ -357,7 +388,7 @@ theorem no_infinite_antichain {A : Set Hollom} (hC : IsAntichain (· ≤ ·) A) 
 
 variable {C : Set Hollom}
 
-lemma test {f : ℕ → ℕ} {n₀ : ℕ} (hf : ∀ n ≥ n₀, f (n + 1) < f n) : False := by
+lemma no_strictly_decreasing {f : ℕ → ℕ} {n₀ : ℕ} (hf : ∀ n ≥ n₀, f (n + 1) < f n) : False := by
   let g (n : ℕ) : ℕ := f (n₀ + n)
   have hg : StrictAnti g := strictAnti_nat_of_succ_lt fun n ↦ hf (n₀ + n) (by simp)
   obtain ⟨m, n, h₁, h₂⟩ := univ_isPWO_of_linearOrder g (by simp)
@@ -382,7 +413,7 @@ theorem exists_finite_intersection (hC : IsChain (· ≤ ·) C) :
     (hC' n hn).nonempty.image _
   have hm (n : ℕ) (hn : n ≥ n₀) : ∃ u v : ℕ, h(u, v, n) ∈ C ∧ min u v = m n := by
     simpa [m] using Nat.sInf_mem (nonempty_mins n hn)
-  suffices ∀ n ≥ n₀, m (n + 1) < m n from test this
+  suffices ∀ n ≥ n₀, m (n + 1) < m n from no_strictly_decreasing this
   intro n hn
   obtain ⟨u, v, huv, hmn⟩ := hm n hn
   rw [← hmn]
@@ -618,7 +649,7 @@ lemma C_inter_Icc_large (f : SpinalMap C) {n : ℕ} {xl yl xh yh : ℕ}
   exact Finset.card_le_card_of_injOn f D_maps f_inj
 
 open Classical Finset in
-lemma card_C_inter_Icc_eq (f : SpinalMap C) {n : ℕ} {xl yl xh yh : ℕ}
+theorem card_C_inter_Icc_eq (f : SpinalMap C) {n : ℕ} {xl yl xh yh : ℕ}
     (hC : IsChain (· ≤ ·) C)
     (hx : xl ≤ xh) (hy : yl ≤ yh)
     (hlo : h(xl, yl, n) ∈ C) (hhi : h(xh, yh, n) ∈ C) :

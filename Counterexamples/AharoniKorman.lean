@@ -55,7 +55,7 @@ lemma Finset.surjOn_of_injOn_of_card_le {α β : Type*} {s : Finset α} {t : Fin
   have : s.image f ⊆ t := by aesop (add simp Finset.subset_iff)
   exact eq_of_subset_of_card_le this (hst.trans_eq (card_image_of_injOn hinj).symm)
 
-lemma Finset.surj_on_of_inj_on_of_card_le' {α β : Type*} {s : Finset α} {t : Finset β}
+lemma Finset.surj_on_of_inj_on_of_card_le_again {α β : Type*} {s : Finset α} {t : Finset β}
     (f : ∀ a ∈ s, β) (hf : ∀ a ha, f a ha ∈ t)
     (hinj : ∀ a₁ a₂ ha₁ ha₂, f a₁ ha₁ = f a₂ ha₂ → a₁ = a₂) (hst : #t ≤ #s) :
     ∀ b ∈ t, ∃ a ha, b = f a ha := by
@@ -65,13 +65,6 @@ lemma Finset.surj_on_of_inj_on_of_card_le' {α β : Type*} {s : Finset α} {t : 
   intro b hb
   obtain ⟨a, ha, rfl⟩ := surjOn_of_injOn_of_card_le f' hmapsto' hinj' (by rwa [card_attach]) hb
   exact ⟨a, a.2, rfl⟩
-
--- lemma Finset.surjOn_of_injOn_of_card_le {α β : Type*} {s : Finset α} {t : Finset β}
---     (f : α → β) (hf : Set.MapsTo f s t) (hinj : Set.InjOn f s) (hst : #t ≤ #s) :
---     Set.SurjOn f s t := fun y hy ↦
---   let ⟨x, hx, hy⟩ :=
---     surj_on_of_inj_on_of_card_le (fun x _ ↦ f x) hf (fun _ _ h h' ↦ hinj h h') hst y hy
---   ⟨x, hx, hy.symm⟩
 
 lemma Finset.injOn_of_surjOn_of_card_le {α β : Type*} {s : Finset α} {t : Finset β}
     (f : α → β) (hf : Set.MapsTo f s t) (hsurj : Set.SurjOn f s t) (hst : #s ≤ #t) :
@@ -162,10 +155,21 @@ end to_move
 attribute [aesop norm 10 tactic] Lean.Elab.Tactic.Omega.omegaDefault
 attribute [aesop 2 simp] Set.subset_def
 
+/-- A type synonym on ℕ³ on which we will construct Hollom's partial order P_5. -/
 def Hollom : Type := ℕ × ℕ × ℕ
   deriving DecidableEq
 
+/--
+The backward equivalence between ℕ³ and the underlying set in Hollom's partial order.
+Note that this equivalence does not respect the partial order relation, and therefore should be used
+explicitly to transfer between the two types, despite their being equal.
+-/
 def ofHollom : Hollom ≃ ℕ × ℕ × ℕ := Equiv.refl _
+/--
+The forward equivalence between ℕ³ and the underlying set in Hollom's partial order.
+Note that this equivalence does not respect the partial order relation, and therefore should be used
+explicitly to transfer between the two types, despite their being equal.
+-/
 def toHollom : ℕ × ℕ × ℕ ≃ Hollom := Equiv.refl _
 
 @[simp] lemma ofHollom_symm_eq : ofHollom.symm = toHollom := rfl
@@ -184,7 +188,10 @@ local notation3 "h(" x ", " y ", " z ")" => toHollom (x, y, z)
 @[elab_as_elim, induction_eliminator, cases_eliminator]
 lemma induction {p : Hollom → Prop} (h : ∀ x y z, p (h(x, y, z))) : ∀ x, p x := by simpa
 
-@[mk_iff]
+/--
+The ordering on ℕ³ which is used to define Hollom's example P₅
+-/
+@[mk_iff, aesop 50% cases]
 inductive HollomOrder : ℕ × ℕ × ℕ → ℕ × ℕ × ℕ → Prop
   | twice {x y n u v m : ℕ} : m + 2 ≤ n → HollomOrder (x, y, n) (u, v, m)
   | within {x y u v m : ℕ} : x ≤ u → y ≤ v → HollomOrder (x, y, m) (u, v, m)

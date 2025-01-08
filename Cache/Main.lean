@@ -107,6 +107,8 @@ def main (args : List String) : IO Unit := do
       -- and turn each "import Mathlib.X.Y.Z" into an argument "Mathlib.X.Y.Z.lean" to `get`.
       getArgs := allModules.toList.map
         fun mod ↦ mkFilePath (mod.components.map (fun s ↦ s.toString)) |>.addExtension "lean"
+    let hm := (← hashMemo.filterByFilePaths getArgs)
+    dbg_trace s!"found {hm.size} files to download"
     getFiles (← hashMemo.filterByFilePaths getArgs) force force goodCurl decompress
   let pack (overwrite verbose unpackedOnly := false) := do
     packCache hashMap overwrite verbose unpackedOnly (← getGitCommitHash)

@@ -71,11 +71,18 @@ lemma term_def (f : ℕ → ℂ) (s : ℂ) (n : ℕ) :
 @[simp]
 lemma term_zero (f : ℕ → ℂ) (s : ℂ) : term f s 0 = 0 := rfl
 
--- We put `hn` first for convnience, so that we can write `rw [LSeries.term_of_ne_zero hn]` etc.
+-- We put `hn` first for convenience, so that we can write `rw [LSeries.term_of_ne_zero hn]` etc.
 @[simp]
 lemma term_of_ne_zero {n : ℕ} (hn : n ≠ 0) (f : ℕ → ℂ) (s : ℂ) :
     term f s n = f n / n ^ s :=
   if_neg hn
+
+theorem term_def' {f : ℕ → ℂ} (hf : f 0 = 0) (s : ℂ) (n : ℕ) :
+    LSeries.term f s n = (n : ℂ) ^ (- s) * f n := by
+  cases n with
+  | zero => rw [LSeries.term_zero, hf, mul_zero]
+  | succ n =>
+      rw [LSeries.term_of_ne_zero (Nat.add_one_ne_zero _), div_eq_mul_inv, cpow_neg, mul_comm]
 
 /--
 If `s ≠ 0`, then the `if .. then .. else` construction in `LSeries.term` isn't needed, since

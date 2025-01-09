@@ -81,6 +81,10 @@ theorem integrableOn_Ioi_rpow_iff {s t : ℝ} (ht : 0 < t) :
     exact Real.rpow_le_rpow_of_exponent_le x_one h
   exact not_IntegrableOn_Ioi_inv this
 
+theorem integrableAtFilter_rpow_atTop {r : ℝ} (hr : r < -1) :
+    IntegrableAtFilter (fun x : ℝ ↦ x ^ r) atTop :=
+  ⟨Set.Ioi 1, Ioi_mem_atTop 1, (integrableOn_Ioi_rpow_iff zero_lt_one).mpr hr⟩
+
 /-- The real power function with any exponent is not integrable on `(0, +∞)`. -/
 theorem not_integrableOn_Ioi_rpow (s : ℝ) : ¬ IntegrableOn (fun x ↦ x ^ s) (Ioi (0 : ℝ)) := by
   intro h
@@ -126,6 +130,10 @@ theorem integrableOn_Ioi_cpow_iff {s : ℂ} {t : ℝ} (ht : 0 < t) :
     have : 0 < a := ht.trans ha
     simp [Complex.abs_cpow_eq_rpow_re_of_pos this]
   rwa [integrableOn_Ioi_rpow_iff ht] at B
+
+theorem integrableAtFilter_cpow_atTop {s : ℂ} (hr : s.re < -1) :
+    IntegrableAtFilter (fun x : ℝ  ↦ (x : ℂ) ^ s) atTop :=
+  ⟨Set.Ioi 1, Ioi_mem_atTop 1, (integrableOn_Ioi_cpow_iff zero_lt_one).mpr hr⟩
 
 /-- The complex power function with any exponent is not integrable on `(0, +∞)`. -/
 theorem not_integrableOn_Ioi_cpow (s : ℂ) :

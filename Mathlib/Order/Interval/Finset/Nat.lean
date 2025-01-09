@@ -62,6 +62,9 @@ lemma range_eq_Icc_zero_sub_one (n : ℕ) (hn : n ≠ 0) : range n = Icc 0 (n - 
   simp_all only [mem_Icc, zero_le, true_and, mem_range]
   exact lt_iff_le_pred (zero_lt_of_ne_zero hn)
 
+theorem range_succ_Icc_zero (n : ℕ) : range (n + 1) = Icc 0 n := by
+  rw [range_eq_Icc_zero_sub_one _ (Nat.add_one_ne_zero _), Nat.add_sub_cancel_right]
+
 theorem _root_.Finset.range_eq_Ico : range = Ico 0 :=
   Ico_zero_eq_range.symm
 

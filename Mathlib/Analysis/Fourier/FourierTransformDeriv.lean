@@ -104,6 +104,10 @@ lemma differentiable_fourierChar : Differentiable ℝ (𝐞 · : ℝ → ℂ) :=
 lemma deriv_fourierChar (x : ℝ) : deriv (𝐞 · : ℝ → ℂ) x = 2 * π * I * 𝐞 x :=
   (Real.hasDerivAt_fourierChar x).deriv
 
+lemma contDiff_fourierChar : ContDiff ℝ ∞ (𝐞 · : ℝ → ℂ) := by
+  simpa [fourierChar] using
+    ((contDiff_const.mul Complex.ofRealCLM.contDiff).mul contDiff_const).cexp
+
 variable {V W : Type*} [NormedAddCommGroup V] [NormedSpace ℝ V]
   [NormedAddCommGroup W] [NormedSpace ℝ W] (L : V →L[ℝ] W →L[ℝ] ℝ)
 
